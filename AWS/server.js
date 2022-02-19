@@ -1,53 +1,30 @@
-console.log('Server-side code running');
+var WebSocketServer = require("ws").Server
+var http = require("http")
+var express = require("express")
+var app = express()
+var port = process.env.PORT || 8080
 
-const express = require('express');
-const app = express();
-app.use(express.static('public'));
+app.use(express.static(__dirname + "/"))
 
-const http = require('http');
-const WebSocket = require('ws');
+var server = http.createServer(app)
+server.listen(port)
 
-const port = 8080;
-const server = http.createServer(express);
-const wss = new WebSocket.Server({ server })
+console.log("http server listening on %d", port)
 
-// const MongoClient = require('mongodb').MongoClient;
-// const url = "mongodb+srv://rome:Sug4rD4ddy@cluster0.4p3ah.mongodb.net/project?retryWrites=true&w=majority";
-// let db;
-// let data;
+var wss = new WebSocketServer({server: server})
+console.log("websocket server created")
 
-// MongoClient.connect(url, (err, database) => {
-//   if(err) {
-//     return console.log(err);
-//   }
-//   const collection = database.db("project").collection("access");
+var ctr = 0
+wss.on("connection", function(ws) {
+  var id = setInterval(function() {
+    ws.send(JSON.stringify({trafficID:"AKB48", start:"2021-04-25T10:01:05", stop:"2021-04-25T10:02:35", gps:"15,133,12,110"}), function() {  })
+  }, 1000)
 
-//   collection.find({}).toArray(function(err, result) {
-//     if (err) throw err;
-//     data = result.toString();
-//     console.log(result);
-//     database.close();
-//   });
+  console.log("websocket connection open")
 
-// index = 0;
-
-  server.listen(port, function() {
-    console.log('Server is listening on port ' + port + '!')
+  ws.on("close", function() {
+    console.log("websocket connection close")
+    clearInterval(id)
   })
+})
 
-  wss.on('connection', function connection(ws) {
-    console.log('Client connected!');
-    ws.send('Server connection established!');
-
-    ws.on('message', function incoming(message) {
-      console.log('Client says: %s', message);
-
-      target_data = "(10,10);(0,0);1:00;2:00"
-      wss.clients.forEach(function each(client) {
-        if (client !== ws && client.readyState === WebSocket.OPEN) {
-          client.send(target_data);
-        }
-      });
-    });
-  });
-// });

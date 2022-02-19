@@ -6,15 +6,18 @@ import io
 import os
 import subprocess
 import math
+import time
 
 import asyncio
 import websockets
 import json
 
 IP ="ndsg-access.herokuapp.com"
+PORT = "8080"
 
 async def server_request():
-    async with websockets.connect("ws://" + IP + ":8080/") as websocket:
+    # async with websockets.connect("ws://AWS") as websocket: replace with AWS
+    async with websockets.connect("ws://" + IP + ":" + PORT + "/") as websocket:    
         while True:
             data = await websocket.recv()
             print(data)
@@ -32,14 +35,13 @@ def check_gps_time(file_name, start, end, lat1, lon1, lat2, lon2):
     try:
         gpx_file = open(file_name, 'r')
     except:
-        print("GPX file not found")
-        return -1
+        return -1;
 
     gpx = gpxpy.parse(gpx_file)
     start_time = datetime.datetime.fromisoformat(start)
     end_time = datetime.datetime.fromisoformat(end)
     #end_time = start_time + datetime.timedelta(minutes=15)
-    
+        
     for track in gpx.tracks:
         for segment in track.segments:
             for point in segment.points:
@@ -50,7 +52,6 @@ def check_gps_time(file_name, start, end, lat1, lon1, lat2, lon2):
                     print("Enclosed:", gps_found)
                     if gps_found:
                         return current_time
-    print("No matching gps data found")
     return 0;
 
 def retrieve(start, end):
@@ -61,8 +62,7 @@ def retrieve(start, end):
     try:
         files = os.listdir("videos")
     except:
-        print("Videos folder not found")
-        return -1
+        return -1;
     files.sort()
     filelist = []
     
@@ -97,6 +97,8 @@ def retrieve(start, end):
 def splice(start, duration, filename):
     name = os.path.splitext(filename)[0]
     newname =  "spliced/" + name + os.path.splitext(filename)[1]
+    if not os.path.exists('videos/spliced'):
+        os.makedirs('videos/spliced')
     if os.name == "nt":
         command =  "ffmpeg -ss " + str(start) + " -i videos/" + filename + " -c copy -t " + str(duration) +" videos/" + newname
     elif os.name == "posix":
@@ -133,36 +135,39 @@ def collect_video(gpx, start, end, lat1, lon1, lat2, lon2, trafficID):
     gps_time = check_gps_time(gpx, start, end, lat1, lon1, lat2, lon2)
     input()
     if (gps_time == -1):
-        return
-    if (gps_time == 0):
-        return
-    end = datetime.datetime.fromisoformat(end)
-    filelist = retrieve(gps_time, end)
-    if (filelist == -1):
-        return
-    merge(filelist, trafficID)
+        print("GPX file not found")
+    elif (gps_time != 0):
+        end = datetime.datetime.fromisoformat(end)
+        filelist = retrieve(gps_time, end)
+        if (filelist == -1):
+            print("Video folder not found")
+            return
+        merge(filelist, trafficID)
 
-if __name__ == "__main__":
-    while True:
-        print("Project Access")
+
+# if __name__ == "__main__":
+#     while True:
+#         print("Project Access")
         
-        try:
-            target_json = asyncio.run(server_request())
-            target = json.loads(target_json)
-            trafficID = target["trafficID"] 
-            start = target["start"]
-            stop = target["stop"]
-            gps = target["gps"].split(",")
+#         try:
+#             target_json = asyncio.run(server_request())
+#             target = json.loads(target_json)
+#             trafficID = target["trafficID"] 
+#             start = target["start"]
+#             stop = target["stop"]
+#             gps = target["gps"].split(",")
 
-            collect_video('test.gpx', start, stop, float(gps[0]), float(gps[1]), float(gps[2]), float(gps[3]), trafficID)
+#             collect_video('test.gpx', start, stop, float(gps[0]), float(gps[1]), float(gps[2]), float(gps[3]), trafficID)
 
-        except KeyboardInterrupt:
-            print ("Exiting Program")
-            exit()
+#         except KeyboardInterrupt as error:
+#             print ("Exiting Program")
+#             exit()
            
-        except ValueError:
-            print("Invalid JSON")
-            exit()
+#         except ValueError as error:
+#             print("Invalid JSON")
+#             exit()
             
-        except asyncio.TimeoutError:
-            print("Cannot find server. Reconnecting to server.")
+#         except (asyncio.TimeoutError, ConnectionRefusedError) as error:
+#             print("Cannot find server. Reconnecting to server.")
+#             time.sleep(10)
+
