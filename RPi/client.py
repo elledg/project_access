@@ -12,12 +12,25 @@ import asyncio
 import websockets
 import json
 
-IP ="ndsg-access.herokuapp.com"
-PORT = "8080"
+import pysftp
+import env
+
+cnopts = pysftp.CnOpts()
+cnopts.hostkeys = None
+
+def send_to_sftp(trafficID, ext):
+    with pysftp.Connection(host=env.IP, username=env.USER, password=env.PASS, cnopts=cnopts) as sftp:
+        try:
+            print("STFP Connection successfully established ... ")
+            sftp.put(env.LOCAL + trafficID + ext, env.REMOTE + trafficID + ext)
+            print("File sent to SFTP server")
+        except Exception as e:
+            print("Error encountered while uploading to SFTP server")
+            print(e)
 
 async def server_request():
     # async with websockets.connect("ws://AWS") as websocket: replace with AWS
-    async with websockets.connect("ws://" + IP + ":" + PORT + "/") as websocket:    
+    async with websockets.connect("ws://" + env.IP + ":" + env.PORT + "/") as websocket:    
         while True:
             data = await websocket.recv()
             print(data)
@@ -145,29 +158,31 @@ def collect_video(gpx, start, end, lat1, lon1, lat2, lon2, trafficID):
         merge(filelist, trafficID)
 
 
-# if __name__ == "__main__":
-#     while True:
-#         print("Project Access")
+if __name__ == "__main__":
+    while True:
+        print("Project Access")
         
-#         try:
-#             target_json = asyncio.run(server_request())
-#             target = json.loads(target_json)
-#             trafficID = target["trafficID"] 
-#             start = target["start"]
-#             stop = target["stop"]
-#             gps = target["gps"].split(",")
+        try:
+            target_json = asyncio.run(server_request())
+            target = json.loads(target_json)
+            trafficID = target["trafficID"] 
+            start = target["start"]
+            stop = target["stop"]
+            gps = target["gps"].split(",")
 
-#             collect_video('test.gpx', start, stop, float(gps[0]), float(gps[1]), float(gps[2]), float(gps[3]), trafficID)
+            collect_video('test.gpx', start, stop, float(gps[0]), float(gps[1]), float(gps[2]), float(gps[3]), trafficID)
+            print("Video created. Sending to server")
+            send_to_sftp(trafficID, '.mp4')
 
-#         except KeyboardInterrupt as error:
-#             print ("Exiting Program")
-#             exit()
+        except KeyboardInterrupt as error:
+            print ("Exiting Program")
+            exit()
            
-#         except ValueError as error:
-#             print("Invalid JSON")
-#             exit()
+        except ValueError as error:
+            print("Invalid JSON")
+            exit()
             
-#         except (asyncio.TimeoutError, ConnectionRefusedError) as error:
-#             print("Cannot find server. Reconnecting to server.")
-#             time.sleep(10)
+        except (asyncio.TimeoutError, ConnectionRefusedError) as error:
+            print("Cannot find server. Reconnecting to server.")
+            time.sleep(10)
 

@@ -2,3 +2,4 @@ videos/
 *.gpx
 *.mp4
 list.txt
+__pycache__
