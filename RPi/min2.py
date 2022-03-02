@@ -5,7 +5,7 @@ import json
 import websockets
 import sys
 
-from acc import *
+from client import *
 
 async def hello(uri, val):
     async with websockets.connect(uri) as websocket:

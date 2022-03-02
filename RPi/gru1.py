@@ -2,6 +2,7 @@
 import asyncio
 import websockets
 from subprocess import Popen
+import os
 
 async def handler(websocket):
     while True:
@@ -19,6 +20,9 @@ if __name__ == "__main__":
     for x in range(int(qty)):
         str_id = str(x)
         command = 'python min2.py ' + str_id
-        Popen(command)
+        if os.name == "nt":
+            Popen(command)
+        elif os.name == "posix":
+            Popen(command, shell=True)
 
     asyncio.run(main())

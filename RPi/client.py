@@ -18,6 +18,32 @@ import env
 cnopts = pysftp.CnOpts()
 cnopts.hostkeys = None
 
+def send_videos():
+    try:
+        files = os.listdir()
+    except:
+        return -1;
+    files.sort()
+    
+    for file in files:
+        file_split = file.split(".")
+        if (len(file_split) < 2):
+            continue
+        trafficID = file_split[0]
+        extension = file_split[1]
+        
+        if extension == "mp4":
+            with pysftp.Connection(host=env.IP, username=env.USER, password=env.PASS, cnopts=cnopts) as sftp:
+                try:
+                    print("STFP Connection successfully established ... ")
+                    print("Sending " + file + " to server")
+                    sftp.put(env.LOCAL + file, env.REMOTE + file)
+                    print("File sent to SFTP server")
+                except Exception as e:
+                    print("Error encountered while uploading to SFTP server")
+                    print(e)
+        
+
 def send_to_sftp(trafficID, ext):
     with pysftp.Connection(host=env.IP, username=env.USER, password=env.PASS, cnopts=cnopts) as sftp:
         try:
@@ -172,7 +198,8 @@ if __name__ == "__main__":
 
             collect_video('test.gpx', start, stop, float(gps[0]), float(gps[1]), float(gps[2]), float(gps[3]), trafficID)
             print("Video created. Sending to server")
-            send_to_sftp(trafficID, '.mp4')
+            # send_to_sftp(trafficID, '.mp4')
+            send_videos()
 
         except KeyboardInterrupt as error:
             print ("Exiting Program")
