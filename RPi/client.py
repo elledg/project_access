@@ -18,6 +18,15 @@ import env
 cnopts = pysftp.CnOpts()
 cnopts.hostkeys = None
 
+async def send_notification(trafficID):
+    msg = {"trafficID" : trafficID,
+            "status" : "sent"}
+    async with websockets.connect('wss://' + env.SFTP_IP + ':' + env.SFTP_PORT + '/') as websocket:
+        await websocket.send(msg)
+        response = await websocket.recv()
+        print(response)
+        # print("SFTP Notification sent")
+
 def send_videos():
     try:
         files = os.listdir()
@@ -50,6 +59,7 @@ def send_to_sftp(trafficID, ext):
             print("STFP Connection successfully established ... ")
             sftp.put(env.LOCAL + trafficID + ext, env.REMOTE + trafficID + ext)
             print("File sent to SFTP server")
+            asyncio.run(send_notification(trafficID))
         except Exception as e:
             print("Error encountered while uploading to SFTP server")
             print(e)
