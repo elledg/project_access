@@ -30,10 +30,10 @@ function addToLog(data) {
 var ctr = 0
 wss.on("connection", function(ws) {
   var id = setInterval(function() {
-    var data = {trafficID:"AKB48", start:"2021-04-25T10:01:05", stop:"2021-04-25T10:02:35", gps:"15,133,12,110"}
+    var data = {trafficID:"AKB48", start:"2021-04-25T10:01:05", stop:"2021-04-25T10:02:35", gps:"15,133,12,110"};
     ws.send(JSON.stringify(data), function() {  });
 
-    addToLog(JSON.stringify(data))
+    addToLog(JSON.stringify(data));
 
   }, 1000)
 

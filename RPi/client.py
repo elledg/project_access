@@ -21,7 +21,8 @@ cnopts.hostkeys = None
 async def send_notification(trafficID):
     msg = {"trafficID" : trafficID,
             "status" : "sent"}
-    async with websockets.connect('wss://' + env.SFTP_IP + ':' + env.SFTP_PORT + '/') as websocket:
+    msg = json.dumps(msg)
+    async with websockets.connect('ws://' + env.SFTP_IP + ':' + env.SFTP_PORT + '/') as websocket:
         await websocket.send(msg)
         response = await websocket.recv()
         print(response)
@@ -209,7 +210,8 @@ if __name__ == "__main__":
             collect_video('test.gpx', start, stop, float(gps[0]), float(gps[1]), float(gps[2]), float(gps[3]), trafficID)
             print("Video created. Sending to server")
             # send_to_sftp(trafficID, '.mp4')
-            send_videos()
+            # send_videos()
+            asyncio.run(send_notification(trafficID))
 
         except KeyboardInterrupt as error:
             print ("Exiting Program")

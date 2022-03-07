@@ -5,9 +5,30 @@ const clients = new Map();
 
 const fs = require('fs');
 const log = "sftp.log";
+const dir = '/var/sftp/myfolder/data/';
 
 console.log("sftp server listening on %d", port)
 console.log("websocket server created")
+
+function fileExists(trafficID){
+    // list all files in the directory
+    try {
+        const files = fs.readdirSync(dir);
+
+        // files object contains all files names
+        for (let i = 0; i < files.length; i++) {
+            file = files[i];
+            var name = file.split(".")[0]
+            if (name == trafficID){
+                console.log(trafficID + " found")
+                return true
+            }
+        }
+        return false
+    } catch (err) {
+        console.log(err);
+    }
+}
 
 function addToLog(data) {
     var time = (new Date()).toISOString().replace(/-/g, "/").replace(/T|Z/g, " ");
@@ -30,9 +51,11 @@ wss.on('connection', (ws) => {
         const message = JSON.parse(messageAsString);
         const metadata = clients.get(ws);
         
-        addToLog(messageAsString);
+        if (fileExists(message.trafficID)) {
+            addToLog(messageAsString);
+            message.status = metadata.message;
+        }
 
-        message.status = metadata.message;
         const outbound = JSON.stringify(message);
 
         [...clients.keys()].forEach((client) => {
