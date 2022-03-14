@@ -35,7 +35,7 @@ wss.on("connection", function(ws) {
     console.log(data)
     ws.send(JSON.stringify(data), function() {  });
 
-    // addToLog(JSON.stringify(data));
+    addToLog(JSON.stringify(data));
 
   }, 1000)
 
