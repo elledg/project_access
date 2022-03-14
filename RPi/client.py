@@ -18,6 +18,8 @@ import env
 cnopts = pysftp.CnOpts()
 cnopts.hostkeys = None
 
+test = True
+
 async def send_notification(trafficID):
     msg = {"trafficID" : trafficID,
             "status" : "sent"}
@@ -187,9 +189,13 @@ def merge(filelist, trafficID):
 
 def collect_video(gpx, start, end, lat1, lon1, lat2, lon2, trafficID):
     gps_time = check_gps_time(gpx, start, end, lat1, lon1, lat2, lon2)
-    input()
-    if (gps_time == -1):
+    if not test: input()
+    if (gps_time == 0):
+        print("No video found")
+        return 0
+    elif (gps_time == -1):
         print("GPX file not found")
+        return 0
     elif (gps_time != 0):
         end = datetime.datetime.fromisoformat(end)
         filelist = retrieve(gps_time, end)
@@ -217,14 +223,15 @@ if __name__ == "__main__":
                 gps = target["gps"].split(",")
 
                 log.write("Collecting video - " + str(datetime.datetime.now()) +"'\n")
-                collect_video('test.gpx', start, stop, float(gps[0]), float(gps[1]), float(gps[2]), float(gps[3]), trafficID)
-                print("Video created. Sending to server")
-                log.write("Sending to server - " + str(datetime.datetime.now()) +"'\n")
-                send_to_sftp(trafficID, '.mp4')
-                log.write("Sent to server - " + str(datetime.datetime.now()) +"'\n")
+                video = collect_video('test.gpx', start, stop, float(gps[0]), float(gps[1]), float(gps[2]), float(gps[3]), trafficID)
+                if (video != 0):
+                    print("Video created. Sending to server")
+                    log.write("Sending to server - " + str(datetime.datetime.now()) +"'\n")
+                    send_to_sftp(trafficID, '.mp4')
+                    log.write("Sent to server - " + str(datetime.datetime.now()) +"'\n")
             log.close()
             
-            exit()
+            if test: exit()
 
 
         except KeyboardInterrupt as error:
