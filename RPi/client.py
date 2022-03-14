@@ -55,15 +55,19 @@ def send_videos():
         
 
 def send_to_sftp(trafficID, ext):
-    with pysftp.Connection(host=env.IP, username=env.USER, password=env.PASS, cnopts=cnopts) as sftp:
-        try:
-            print("STFP Connection successfully established ... ")
-            sftp.put(env.LOCAL + trafficID + ext, env.REMOTE + trafficID + ext)
-            print("File sent to SFTP server")
-            asyncio.run(send_notification(trafficID))
-        except Exception as e:
-            print("Error encountered while uploading to SFTP server")
-            print(e)
+    try: 
+        with pysftp.Connection(host=env.IP, username=env.USER, password=env.PASS, cnopts=cnopts) as sftp:
+            try:
+                print("STFP Connection successfully established ... ")
+                sftp.put(env.LOCAL + trafficID + ext, env.REMOTE + trafficID + ext)
+                print("File sent to SFTP server")
+                asyncio.run(send_notification(trafficID))
+            except Exception as e:
+                print("Error encountered while uploading to SFTP server")
+                print(e)
+    except Exception as e:
+        print("Cannot connect to SFTP server")
+        print(e)
 
 async def server_request():
     # async with websockets.connect("ws://AWS") as websocket: replace with AWS
@@ -150,9 +154,9 @@ def splice(start, duration, filename):
     if not os.path.exists('videos/spliced'):
         os.makedirs('videos/spliced')
     if os.name == "nt":
-        command =  "ffmpeg -ss " + str(start) + " -i videos/" + filename + " -c copy -t " + str(duration) +" videos/" + newname
+        command =  "ffmpeg -ss " + str(start) + " -i videos/" + filename + " -c copy -t " + str(duration) +" videos/" + newname + " -y"
     elif os.name == "posix":
-        command =  "ffmpeg -ss " + str(start) + " -i 'videos/" + filename + "' -c copy -t " + str(duration) +" 'videos/" + newname + "'"
+        command =  "ffmpeg -ss " + str(start) + " -i 'videos/" + filename + "' -c copy -t " + str(duration) +" 'videos/" + newname + "' -y"
     print(command)
     subprocess.call(command,shell=True)
     return (newname)
@@ -177,7 +181,7 @@ def merge(filelist, trafficID):
     for file in filelist:
         list.write("file 'videos/" + file + "'\n")
     list.close()
-    command = 'ffmpeg -f concat -safe 0 -i list.txt -c copy ' + trafficID + '.mp4'
+    command = 'ffmpeg -f concat -safe 0 -i list.txt -c copy ' + trafficID + '.mp4 -y'
     subprocess.call(command,shell=True)
 
 
@@ -209,9 +213,10 @@ if __name__ == "__main__":
 
             collect_video('test.gpx', start, stop, float(gps[0]), float(gps[1]), float(gps[2]), float(gps[3]), trafficID)
             print("Video created. Sending to server")
-            # send_to_sftp(trafficID, '.mp4')
+            send_to_sftp(trafficID, '.mp4')
             # send_videos()
-            asyncio.run(send_notification(trafficID))
+            # asyncio.run(send_notification(trafficID))
+            # exit()
 
         except KeyboardInterrupt as error:
             print ("Exiting Program")

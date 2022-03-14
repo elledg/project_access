@@ -19,7 +19,7 @@ console.log("websocket server created")
 
 function addToLog(data) {
   var time = (new Date()).toISOString().replace(/-/g, "/").replace(/T|Z/g, " ");
-  var text = time + ' - ' + data;
+  var text = time + ' - ' + data + '\n';
 
     fs.appendFile(log, text, function (err) {
         if (err) throw err;
