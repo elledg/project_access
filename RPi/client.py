@@ -207,20 +207,25 @@ if __name__ == "__main__":
             data_json = asyncio.run(server_request())
             data = json.loads(data_json)
             targets = data["data"] 
-
+            
+            log = open('log.txt', "a")
             for target in targets:
+                log.write(str(datetime.datetime.now()) + " - " + str(target) + "'\n")
                 trafficID = target["trafficID"] 
                 start = target["start"]
                 stop = target["stop"]
                 gps = target["gps"].split(",")
 
+                log.write("Collecting video - " + str(datetime.datetime.now()) +"'\n")
                 collect_video('test.gpx', start, stop, float(gps[0]), float(gps[1]), float(gps[2]), float(gps[3]), trafficID)
                 print("Video created. Sending to server")
+                log.write("Sending to server - " + str(datetime.datetime.now()) +"'\n")
                 send_to_sftp(trafficID, '.mp4')
+                log.write("Sent to server - " + str(datetime.datetime.now()) +"'\n")
+            log.close()
             
-            # send_videos()
-            # asyncio.run(send_notification(trafficID))
-            # exit()
+            exit()
+
 
         except KeyboardInterrupt as error:
             print ("Exiting Program")
