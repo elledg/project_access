@@ -204,16 +204,20 @@ if __name__ == "__main__":
         print("Project Access")
         
         try:
-            target_json = asyncio.run(server_request())
-            target = json.loads(target_json)
-            trafficID = target["trafficID"] 
-            start = target["start"]
-            stop = target["stop"]
-            gps = target["gps"].split(",")
+            data_json = asyncio.run(server_request())
+            data = json.loads(data_json)
+            targets = data["data"] 
 
-            collect_video('test.gpx', start, stop, float(gps[0]), float(gps[1]), float(gps[2]), float(gps[3]), trafficID)
-            print("Video created. Sending to server")
-            send_to_sftp(trafficID, '.mp4')
+            for target in targets:
+                trafficID = target["trafficID"] 
+                start = target["start"]
+                stop = target["stop"]
+                gps = target["gps"].split(",")
+
+                collect_video('test.gpx', start, stop, float(gps[0]), float(gps[1]), float(gps[2]), float(gps[3]), trafficID)
+                print("Video created. Sending to server")
+                send_to_sftp(trafficID, '.mp4')
+            
             # send_videos()
             # asyncio.run(send_notification(trafficID))
             # exit()
