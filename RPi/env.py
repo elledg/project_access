@@ -1,4 +1,4 @@
-IP = "ip_address"
+IP = "175.41.168.2"
 PORT = "8080"
 USER = "user"
 PASS = "password"
