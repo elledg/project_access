@@ -1,6 +1,7 @@
 videos/
 *.gpx
 *.mp4
+*.pem
 list.txt
 __pycache__
 env.py
