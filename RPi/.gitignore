@@ -1,7 +1,11 @@
 videos/
 *.gpx
 *.mp4
+access-rome.pem
 list.txt
 __pycache__
 env.py
+<<<<<<< HEAD
 log.txt
+=======
+>>>>>>> 69b6395fc9b064769e863fb6b3af3652a00c809a

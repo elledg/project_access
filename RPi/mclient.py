@@ -242,26 +242,25 @@ if __name__ == "__main__":
                 # check how many threads to create per group
                 size = len(targets)
                 print("size:", size)
+
+                # create n threads    
+                threads = []
                 for target in targets:
-
                     print("target:",target)
-                    # create n threads    
-                    threads = []
-                    for i in range(size):
-                        # each thread processes video
-                        thread = threading.Thread(target=processor, name=str(i), args={json.dumps(target)})
-                        threads.append(thread)
-                        thread.start()
 
-                    # wait for threading to finish
-                    for thread in threads:  # iterates over the threads
-                        print("Thread", thread.name, "done!")
-                        thread.join()       # waits until the thread has finished work
+                    # each thread processes video
+                    thread = threading.Thread(target=processor, name=str(target["trafficID"]), args={json.dumps(target)})
+                    threads.append(thread)
+                    thread.start()
+
+                # wait for threading to finish
+                for thread in threads:  # iterates over the threads
+                    print("Thread", thread.name, "done!")
+                    thread.join()       # waits until the thread has finished work
 
                 log.close()
             
             if test: exit()
-
 
         except KeyboardInterrupt as error:
             print ("Exiting Program")
