@@ -1,7 +1,7 @@
 videos/
 *.gpx
 *.mp4
-*.pem
+access-rome.pem
 list.txt
 __pycache__
 env.py
