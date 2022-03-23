@@ -246,4 +246,6 @@ if __name__ == "__main__":
             print("Cannot find server. Reconnecting to server.")
             time.sleep(10)
 
+        except Exception as e:
+            print(e)
             
