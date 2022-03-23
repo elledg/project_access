@@ -252,8 +252,9 @@ def perform_work(work, finished):
     counter = 0
     while True:
         if not work.empty():
-            v = work.get()
-            display(f'Consuming {counter}: {v}')
+            v = work.get() # assume work.get() returns the file location of the video or filename 
+            # upload via sftp
+            display(f'Consuming {counter}: {v}') # print the file location or filename sa consuming
             counter += 1
         else:
             q = finished.get()
@@ -270,9 +271,16 @@ if __name__ == "__main__":
             data = json.loads(data_json)
             incidents = data["data"] 
 
+            print("[INCIDENTS]")
+            for i in incidents:
+                print(i)
+            print("item: ", incidents.pop())
+
+            q2.queue = queue.deque(l)
+
             log = open('log.txt', "a")
             
-            max = input("Input maximum amount of worker threads:")
+            max = int(input("Input maximum amount of worker threads:"))
             work = Queue()
             finished = Queue()
 
