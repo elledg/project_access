@@ -241,6 +241,7 @@ def display(msg):
 def create_work(queue, finished, max):
     finished.put(False)
     for x in range(max):
+
         v = random.randint(1,100)
         queue.put(v)
         display(f'Producing {x}: {v}')
@@ -271,21 +272,17 @@ if __name__ == "__main__":
             data = json.loads(data_json)
             incidents = data["data"] 
 
-            print("[INCIDENTS]")
-            for i in incidents:
-                print(i)
-            print("item: ", incidents.pop())
-
-            q2.queue = queue.deque(l)
-
             log = open('log.txt', "a")
             
             max = int(input("Input maximum amount of worker threads:"))
+
             work = Queue()
+            [work.put(i) for i in incidents]  
+            ready = Queue()
             finished = Queue()
 
-            producer = Thread(target=create_work, args=[work,finished,max], daemon=True)
-            consumer = Thread(target=perform_work, args=[work,finished], daemon=True)
+            producer = Thread(target=create_work, args=[ready,finished,max], daemon=True)
+            consumer = Thread(target=perform_work, args=[ready,finished], daemon=True)
             
             producer.start()
             consumer.start()
