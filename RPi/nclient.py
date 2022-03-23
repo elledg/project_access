@@ -68,14 +68,17 @@ def send_videos():
                     print(e)
         
 
-def send_to_sftp(trafficID, ext):
+def send_to_sftp(filename, ext=False):
     try: 
         with pysftp.Connection(host=env.IP, username=env.USER, password=env.PASS, cnopts=cnopts) as sftp:
             try:
                 print("STFP Connection successfully established ... ")
-                sftp.put(env.LOCAL + trafficID + ext, env.REMOTE + trafficID + ext)
+                if ext:
+                    sftp.put(env.LOCAL + filename + ext, env.REMOTE + filename + ext)
+                else:
+                    sftp.put(env.LOCAL + filename, env.REMOTE + filename)
                 print("File sent to SFTP server")
-                asyncio.run(send_notification(trafficID))
+                asyncio.run(send_notification(filename))
             except Exception as e:
                 print("Error encountered while uploading to SFTP server")
                 print(e)
@@ -255,6 +258,7 @@ def perform_work(work, finished):
         if not work.empty():
             v = work.get() # assume work.get() returns the file location of the video or filename 
             # upload via sftp
+            send_to_sftp(v)
             display(f'Consuming {counter}: {v}') # print the file location or filename sa consuming
             counter += 1
         else:

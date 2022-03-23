@@ -156,9 +156,9 @@ def splice(start, duration, filename):
     if not os.path.exists('videos/spliced'):
         os.makedirs('videos/spliced')
     if os.name == "nt":
-        command =  "ffmpeg -ss " + str(start) + " -i videos/" + filename + " -c copy -t " + str(duration) +" videos/" + newname + " -y"
+        command =  "ffmpeg -hide_banner -loglevel error -ss " + str(start) + " -i videos/" + filename + " -c copy -t " + str(duration) +" videos/" + newname + " -y"
     elif os.name == "posix":
-        command =  "ffmpeg -ss " + str(start) + " -i 'videos/" + filename + "' -c copy -t " + str(duration) +" 'videos/" + newname + "' -y"
+        command =  "ffmpeg -hide_banner -loglevel error -ss " + str(start) + " -i 'videos/" + filename + "' -c copy -t " + str(duration) +" 'videos/" + newname + "' -y"
     print(command)
     subprocess.call(command,shell=True)
     return (newname)
@@ -183,7 +183,7 @@ def merge(filelist, trafficID):
     for file in filelist:
         list.write("file 'videos/" + file + "'\n")
     list.close()
-    command = 'ffmpeg -f concat -safe 0 -i list.txt -c copy ' + trafficID + '.mp4 -y'
+    command = 'ffmpeg -hide_banner -loglevel error -f concat -safe 0 -i list.txt -c copy ' + trafficID + '.mp4 -y'
     subprocess.call(command,shell=True)
 
 
@@ -246,4 +246,6 @@ if __name__ == "__main__":
             print("Cannot find server. Reconnecting to server.")
             time.sleep(10)
 
+        except Exception as e:
+            print(e)
             

@@ -158,9 +158,9 @@ def splice(start, duration, filename):
     if not os.path.exists('videos/spliced'):
         os.makedirs('videos/spliced')
     if os.name == "nt":
-        command =  "ffmpeg -ss " + str(start) + " -i videos/" + filename + " -c copy -t " + str(duration) +" videos/" + newname + " -y"
+        command =  "ffmpeg -hide_banner -loglevel error -ss " + str(start) + " -i videos/" + filename + " -c copy -t " + str(duration) +" videos/" + newname + " -y"
     elif os.name == "posix":
-        command =  "ffmpeg -ss " + str(start) + " -i 'videos/" + filename + "' -c copy -t " + str(duration) +" 'videos/" + newname + "' -y"
+        command =  "ffmpeg -hide_banner -loglevel error -ss " + str(start) + " -i 'videos/" + filename + "' -c copy -t " + str(duration) +" 'videos/" + newname + "' -y"
     print(command)
     subprocess.call(command,shell=True)
     return (newname)
@@ -185,7 +185,7 @@ def merge(filelist, trafficID):
     for file in filelist:
         list.write("file 'videos/" + file + "'\n")
     list.close()
-    command = 'ffmpeg -f concat -safe 0 -i list.txt -c copy ' + trafficID + '.mp4 -y'
+    command = 'ffmpeg -hide_banner -loglevel error -f concat -safe 0 -i list.txt -c copy ' + trafficID + '.mp4 -y'
     subprocess.call(command,shell=True)
 
 
@@ -208,19 +208,19 @@ def collect_video(gpx, start, end, lat1, lon1, lat2, lon2, trafficID):
 
 def processor(json_target):
     target = json.loads(json_target)
-    log.write(str(datetime.datetime.now()) + " - " + str(target) + "'\n")
+    log.write("Received incident from GRU - " + str(datetime.datetime.now()) + " - " + str(target) + "'\n")
     trafficID = target["trafficID"] 
     start = target["start"]
     stop = target["stop"]
     gps = target["gps"].split(",")
 
-    log.write("Collecting video - " + str(datetime.datetime.now()) +"'\n")
+    log.write("Generating " + trafficID + " video - " + str(datetime.datetime.now()) +"'\n")
     video = collect_video('test.gpx', start, stop, float(gps[0]), float(gps[1]), float(gps[2]), float(gps[3]), trafficID)
     if (video != 0):
         print("Video created. Sending to server")
-        log.write("Sending to server - " + str(datetime.datetime.now()) +"'\n")
+        log.write("Sending " + trafficID + " to server - " + str(datetime.datetime.now()) +"'\n")
         send_to_sftp(trafficID, '.mp4')
-        log.write("Sent to server - " + str(datetime.datetime.now()) +"'\n")
+        log.write("Sent " + trafficID + " to server - " + str(datetime.datetime.now()) +"'\n")
 
 if __name__ == "__main__":
     while True:
@@ -230,6 +230,10 @@ if __name__ == "__main__":
             data_json = asyncio.run(server_request())
             data = json.loads(data_json)
             incidents = data["data"] 
+
+            log = open('log.txt', "a")
+
+            log.write("Received JSON from server - " + str(datetime.datetime.now()) +"'\n")
             
             # group the lists into sublists of size 4
             chunks = [incidents[x:x+4] for x in range(0, len(incidents), 4)]
@@ -238,7 +242,7 @@ if __name__ == "__main__":
             for targets in chunks:
                 print("targets:", targets)
 
-                log = open('log.txt', "a")
+                
                 # check how many threads to create per group
                 size = len(targets)
                 print("size:", size)
@@ -258,7 +262,7 @@ if __name__ == "__main__":
                     print("Thread", thread.name, "done!")
                     thread.join()       # waits until the thread has finished work
 
-                log.close()
+            log.close()
             
             if test: exit()
 
@@ -273,4 +277,3 @@ if __name__ == "__main__":
         except (asyncio.TimeoutError, ConnectionRefusedError) as error:
             print("Cannot find server. Reconnecting to server.")
             time.sleep(10)
-
