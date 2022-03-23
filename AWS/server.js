@@ -39,6 +39,7 @@ wss.on("connection", function(ws) {
     var inc6 = {trafficID:"AKB06", start:"2021-04-25T10:01:05", stop:"2021-04-25T10:02:35", gps:"15,133,12,110"};
     var inc7 = {trafficID:"AKB07", start:"2021-04-25T10:01:05", stop:"2021-04-25T10:04:35", gps:"15,133,12,110"};
     var inc8 = {trafficID:"AKB08", start:"2021-04-25T10:01:05", stop:"2021-04-25T10:01:35", gps:"15,133,12,110"};
+    var data = {data:[inc0, inc1, inc2, inc3, inc4, inc5, inc6, inc7, inc8]}
     console.log(data)
     ws.send(JSON.stringify(data), function() {  });
 
