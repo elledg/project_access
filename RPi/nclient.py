@@ -219,7 +219,7 @@ def collect_video(gpx, start, end, lat1, lon1, lat2, lon2, trafficID):
             return
         merge(filelist, trafficID)
 
-def processor(json_target):
+def processor_old(json_target):
     target = json.loads(json_target)
     log.write(str(datetime.datetime.now()) + " - " + str(target) + "'\n")
     trafficID = target["trafficID"] 
@@ -235,28 +235,45 @@ def processor(json_target):
         send_to_sftp(trafficID, '.mp4')
         log.write("Sent to server - " + str(datetime.datetime.now()) +"'\n")
 
+
+def processor(target):
+    log.write(str(datetime.datetime.now()) + " - " + str(target) + "'\n")
+    trafficID = target["trafficID"] 
+    start = target["start"]
+    stop = target["stop"]
+    gps = target["gps"].split(",")
+
+    log.write("Collecting video - " + str(datetime.datetime.now()) +"'\n")
+    video = collect_video('test.gpx', start, stop, float(gps[0]), float(gps[1]), float(gps[2]), float(gps[3]), trafficID)
+
 def display(msg):
     threadname = threading.current_thread().name
     processname = multiprocessing.current_process().name
     logging.info(f'{processname}\{threadname}: {msg}')
 
 # Producer
-def create_work(queue, finished, max):
+def create_work(work, ready, finished):
     finished.put(False)
-    for x in range(max):
-
-        v = random.randint(1,100)
-        queue.put(v)
-        display(f'Producing {x}: {v}')
-    finished.put(True)
-    display('finished')
-
-# Consumer
-def perform_work(work, finished):
-    counter = 0
     while True:
         if not work.empty():
-            v = work.get() # assume work.get() returns the file location of the video or filename 
+            x = work.get()
+            processor(x)
+            filename = x["trafficID"]
+            ready.put(filename)
+            display(f'Producing {filename}')
+        else:
+            q = ready.get()
+            if q == True:
+                break
+        finished.put(True)
+        display(f'Produced {filename}')
+
+# Consumer
+def perform_work(ready, finished):
+    counter = 0
+    while True:
+        if not ready.empty():
+            v = ready.get() # assume work.get() returns the file location of the video or filename 
             # upload via sftp
             send_to_sftp(v)
             display(f'Consuming {counter}: {v}') # print the file location or filename sa consuming
@@ -265,34 +282,55 @@ def perform_work(work, finished):
             q = finished.get()
             if q == True:
                 break
-        display('finished')
+        display(f'finished {v}')
 
 if __name__ == "__main__":
     while True:
         print("Project Access")
-        
+        n_thread = int(input("Input maximum amount of worker threads:"))
+
         try:
             data_json = asyncio.run(server_request())
             data = json.loads(data_json)
             incidents = data["data"] 
 
             log = open('log.txt', "a")
-            
-            max = int(input("Input maximum amount of worker threads:"))
 
             work = Queue()
             [work.put(i) for i in incidents]  
+            # work.put(None)  # Ensures that producers terminate
+
             ready = Queue()
             finished = Queue()
 
-            producer = Thread(target=create_work, args=[ready,finished,max], daemon=True)
-            consumer = Thread(target=perform_work, args=[ready,finished], daemon=True)
+            # producer = Thread(target=create_work, args=[work,ready,finished,max], daemon=True)
+            # consumer = Thread(target=perform_work, args=[work,ready,finished], daemon=True)
             
-            producer.start()
+            # producer.start()
+            # consumer.start()
+
+            # producer.join()
+            # display('Producer has finished')
+            # consumer.join()
+            # display('Consumer has finished')
+
+            # display("Finished")
+
+            # Set up and start producer processes
+            producers = [Thread(target=create_work, args=[work,ready,finished], daemon=True) for _ in range(n_thread)]
+            for p in producers:
+                p.start()
+            # Set up and start consumer process
+            consumer = Thread(target=perform_work, args=[ready,finished], daemon=True)
             consumer.start()
 
-            producer.join()
-            display('Producer has finished')
+            # Wait for producers to finish
+            for p in producers:
+                p.join()
+                display('Producer has finished')
+
+            # Wait for consumer to finish
+            # finished.put(None)
             consumer.join()
             display('Consumer has finished')
 
