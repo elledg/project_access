@@ -32,6 +32,11 @@ cnopts.hostkeys = None
 
 test = True
 
+def display(msg):
+    threadname = threading.current_thread().name
+    processname = multiprocessing.current_process().name
+    logging.info(f'{processname}\{threadname}: {msg}')
+
 async def send_notification(trafficID):
     msg = {"trafficID" : trafficID,
             "status" : "sent"}
@@ -67,7 +72,6 @@ def send_videos():
                     print("Error encountered while uploading to SFTP server")
                     print(e)
         
-
 def send_to_sftp(filename, ext=False):
     try: 
         with pysftp.Connection(host=env.IP, username=env.USER, password=env.PASS, cnopts=cnopts) as sftp:
@@ -152,18 +156,26 @@ def retrieve(start, end):
         
         if(floor <= time_start and time_start < ceiling):
             new_file = compute_splice(start, end, file)
-            print("File:", new_file)
+            # print("File:", new_file)
             filelist.append(new_file)
         elif(floor < time_end and time_end <= ceiling):
             new_file = compute_splice(start, end, file)
-            print("File:", new_file)
+            # print("File:", new_file)
             filelist.append(new_file)
         elif(floor > time_start and ceiling < time_end):
-            print("File:", file)
+            # print("File:", file)
             filelist.append(file)
         elif(floor > time_end):
             break
     return filelist
+
+def merge(filelist, trafficID):
+    list = open('list.txt', "w+")
+    for file in filelist:
+        list.write("file 'videos/" + file + "'\n")
+    list.close()
+    command = 'ffmpeg -hide_banner -loglevel error -f concat -safe 0 -i list.txt -c copy ' + trafficID + '.mp4 -y'
+    subprocess.call(command,shell=True)
 
 def splice(start, duration, filename):
     name = os.path.splitext(filename)[0]
@@ -171,10 +183,10 @@ def splice(start, duration, filename):
     if not os.path.exists('videos/spliced'):
         os.makedirs('videos/spliced')
     if os.name == "nt":
-        command =  "ffmpeg -ss " + str(start) + " -i videos/" + filename + " -c copy -t " + str(duration) +" videos/" + newname + " -y"
+        command =  "ffmpeg -hide_banner -loglevel error -ss " + str(start) + " -i videos/" + filename + " -c copy -t " + str(duration) +" videos/" + newname + " -y"
     elif os.name == "posix":
-        command =  "ffmpeg -ss " + str(start) + " -i 'videos/" + filename + "' -c copy -t " + str(duration) +" 'videos/" + newname + "' -y"
-    print(command)
+        command =  "ffmpeg -hide_banner -loglevel error -ss " + str(start) + " -i 'videos/" + filename + "' -c copy -t " + str(duration) +" 'videos/" + newname + "' -y"
+    # print(command)
     subprocess.call(command,shell=True)
     return (newname)
     
@@ -193,15 +205,6 @@ def compute_splice(start, end, filename):
         tstart = datetime.datetime.strptime(file[1], FMT) - datetime.datetime.strptime(time_end, FMT)
         return (splice(tstart, tdelta, filename))
 
-def merge(filelist, trafficID):
-    list = open('list.txt', "w+")
-    for file in filelist:
-        list.write("file 'videos/" + file + "'\n")
-    list.close()
-    command = 'ffmpeg -f concat -safe 0 -i list.txt -c copy ' + trafficID + '.mp4 -y'
-    subprocess.call(command,shell=True)
-
-
 def collect_video(gpx, start, end, lat1, lon1, lat2, lon2, trafficID):
     gps_time = check_gps_time(gpx, start, end, lat1, lon1, lat2, lon2)
     if not test: input()
@@ -219,23 +222,6 @@ def collect_video(gpx, start, end, lat1, lon1, lat2, lon2, trafficID):
             return
         merge(filelist, trafficID)
 
-def processor_old(json_target):
-    target = json.loads(json_target)
-    log.write(str(datetime.datetime.now()) + " - " + str(target) + "'\n")
-    trafficID = target["trafficID"] 
-    start = target["start"]
-    stop = target["stop"]
-    gps = target["gps"].split(",")
-
-    log.write("Collecting video - " + str(datetime.datetime.now()) +"'\n")
-    video = collect_video('test.gpx', start, stop, float(gps[0]), float(gps[1]), float(gps[2]), float(gps[3]), trafficID)
-    if (video != 0):
-        print("Video created. Sending to server")
-        log.write("Sending to server - " + str(datetime.datetime.now()) +"'\n")
-        send_to_sftp(trafficID, '.mp4')
-        log.write("Sent to server - " + str(datetime.datetime.now()) +"'\n")
-
-
 def processor(target):
     log.write(str(datetime.datetime.now()) + " - " + str(target) + "'\n")
     trafficID = target["trafficID"] 
@@ -244,12 +230,7 @@ def processor(target):
     gps = target["gps"].split(",")
 
     log.write("Collecting video - " + str(datetime.datetime.now()) +"'\n")
-    video = collect_video('test.gpx', start, stop, float(gps[0]), float(gps[1]), float(gps[2]), float(gps[3]), trafficID)
-
-def display(msg):
-    threadname = threading.current_thread().name
-    processname = multiprocessing.current_process().name
-    logging.info(f'{processname}\{threadname}: {msg}')
+    collect_video('test.gpx', start, stop, float(gps[0]), float(gps[1]), float(gps[2]), float(gps[3]), trafficID)
 
 # Producer
 def create_work(work, ready, finished):
@@ -257,37 +238,35 @@ def create_work(work, ready, finished):
     while True:
         if not work.empty():
             x = work.get()
+            v = x["trafficID"]+".mp4"
+
+            display(f'Producing: {v}')
             processor(x)
-            filename = x["trafficID"]
-            ready.put(filename)
-            display(f'Producing {filename}')
+            ready.put(v)
+            display(f'Produced: {v}')
+            
+            finished.put(True)
         else:
-            q = ready.get()
-            if q == True:
-                break
-        finished.put(True)
-        display(f'Produced {filename}')
+            break
 
 # Consumer
-def perform_work(ready, finished):
-    counter = 0
+def perform_work(work, finished):
+    time.sleep(1)
     while True:
-        if not ready.empty():
-            v = ready.get() # assume work.get() returns the file location of the video or filename 
-            # upload via sftp
+        if not work.empty():
+            v = work.get()
+            display(f'Consuming: {v}')
             send_to_sftp(v)
-            display(f'Consuming {counter}: {v}') # print the file location or filename sa consuming
-            counter += 1
+            display(f'Consumed: {v}')
         else:
             q = finished.get()
             if q == True:
                 break
-        display(f'finished {v}')
 
 if __name__ == "__main__":
     while True:
         print("Project Access")
-        n_thread = int(input("Input maximum amount of worker threads:"))
+        n_thread = int(input("Input maximum amount of producer threads: "))
 
         try:
             data_json = asyncio.run(server_request())
@@ -298,23 +277,9 @@ if __name__ == "__main__":
 
             work = Queue()
             [work.put(i) for i in incidents]  
-            # work.put(None)  # Ensures that producers terminate
 
             ready = Queue()
             finished = Queue()
-
-            # producer = Thread(target=create_work, args=[work,ready,finished,max], daemon=True)
-            # consumer = Thread(target=perform_work, args=[work,ready,finished], daemon=True)
-            
-            # producer.start()
-            # consumer.start()
-
-            # producer.join()
-            # display('Producer has finished')
-            # consumer.join()
-            # display('Consumer has finished')
-
-            # display("Finished")
 
             # Set up and start producer processes
             producers = [Thread(target=create_work, args=[work,ready,finished], daemon=True) for _ in range(n_thread)]
@@ -330,7 +295,6 @@ if __name__ == "__main__":
                 display('Producer has finished')
 
             # Wait for consumer to finish
-            # finished.put(None)
             consumer.join()
             display('Consumer has finished')
 
