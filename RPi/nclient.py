@@ -47,31 +47,6 @@ async def send_notification(trafficID):
         print(response)
         # print("SFTP Notification sent")
 
-def send_videos():
-    try:
-        files = os.listdir()
-    except:
-        return -1
-    files.sort()
-    
-    for file in files:
-        file_split = file.split(".")
-        if (len(file_split) < 2):
-            continue
-        trafficID = file_split[0]
-        extension = file_split[1]
-        
-        if extension == "mp4":
-            with pysftp.Connection(host=env.IP, username=env.USER, password=env.PASS, cnopts=cnopts) as sftp:
-                try:
-                    print("STFP Connection successfully established ... ")
-                    print("Sending " + file + " to server")
-                    sftp.put(env.LOCAL + file, env.REMOTE + file)
-                    print("File sent to SFTP server")
-                except Exception as e:
-                    print("Error encountered while uploading to SFTP server")
-                    print(e)
-        
 def send_to_sftp(filename, ext=False):
     try: 
         with pysftp.Connection(host=env.IP, username=env.USER, password=env.PASS, cnopts=cnopts) as sftp:
@@ -108,7 +83,7 @@ def is_within_geofence(lat, lon, lat1, lon1, lat2, lon2):
 
 def check_gps_time(file_name, start, end, lat1, lon1, lat2, lon2):
     try:
-        gpx_file = open(file_name, 'r')
+        gpx_file = open('files/'+file_name, 'r')
     except:
         return -1
 
@@ -135,7 +110,7 @@ def retrieve(start, end):
     time_end = end.time()
 
     try:
-        files = os.listdir("videos")
+        files = os.listdir("files/videos")
     except:
         return -1
     files.sort()
@@ -170,15 +145,12 @@ def retrieve(start, end):
     return filelist
 
 def merge(filelist, trafficID):
-    # print("Current:", threading.current_thread().ident)
-    # print("Get:", threading.get_ident())
-    # print("Name:", threading.current_thread().name)
     thread = threading.current_thread().name
     list = open('files/list-'+thread+'.txt', "w+")
     for file in filelist:
-        list.write("file 'files/videos/" + file + "'\n")
+        list.write("file 'videos/" + file + "'\n")
     list.close()
-    command = 'ffmpeg -hide_banner -loglevel error -f concat -safe 0 -i list-'+thread+'.txt -c copy ' + trafficID + '.mp4 -y'
+    command = 'ffmpeg -hide_banner -loglevel error -f concat -safe 0 -i files/list-'+thread+'.txt -c copy ' + trafficID + '.mp4 -y'
     subprocess.call(command,shell=True)
 
 def splice(start, duration, filename):
@@ -278,7 +250,7 @@ if __name__ == "__main__":
             data = json.loads(data_json)
             incidents = data["data"] 
 
-            log = open('log.txt', "a")
+            log = open('files/log.txt', "a")
 
             work = Queue()
             [work.put(i) for i in incidents]  
