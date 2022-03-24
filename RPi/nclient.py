@@ -53,9 +53,9 @@ def send_to_sftp(filename, ext=False):
             try:
                 print("STFP Connection successfully established ... ")
                 if ext:
-                    sftp.put(env.LOCAL + filename + ext, env.REMOTE + filename + ext)
+                    sftp.put(env.LOCAL + "output/" + filename + ext, env.REMOTE + filename + ext)
                 else:
-                    sftp.put(env.LOCAL + filename, env.REMOTE + filename)
+                    sftp.put(env.LOCAL + "output/" +  filename, env.REMOTE + filename)
                 print("File sent to SFTP server")
                 asyncio.run(send_notification(filename))
             except Exception as e:
@@ -142,12 +142,14 @@ def retrieve(start, end):
     return filelist
 
 def merge(filelist, trafficID):
+    if not os.path.exists('output'):
+        os.makedirs('output')
     thread = threading.current_thread().name
     list = open('files/list-'+thread+'.txt', "w+")
     for file in filelist:
         list.write("file 'videos/" + file + "'\n")
     list.close()
-    command = 'ffmpeg -hide_banner -loglevel error -f concat -safe 0 -i files/list-'+thread+'.txt -c copy ' + trafficID + '.mp4 -y'
+    command = 'ffmpeg -hide_banner -loglevel error -f concat -safe 0 -i files/list-'+thread+'.txt -c copy output/' + trafficID + '.mp4 -y'
     subprocess.call(command,shell=True)
 
 def splice(start, end, filename):
