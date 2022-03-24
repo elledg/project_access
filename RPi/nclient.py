@@ -98,8 +98,8 @@ def check_gps_time(file_name, start, end, lat1, lon1, lat2, lon2):
                 current_time = point.time.replace(tzinfo=None)
                 if start_time <= current_time and end_time >= current_time:
                     gps_found = is_within_geofence(point.latitude, point.longitude, lat1, lon1, lat2, lon2)
-                    print("Timestamp:", current_time)
-                    print("Enclosed:", gps_found)
+                    # print("Timestamp:", current_time)
+                    # print("Enclosed:", gps_found)
                     if gps_found:
                         return current_time
     return 0
@@ -131,14 +131,11 @@ def retrieve(start, end):
         
         if(floor <= time_start and time_start < ceiling):
             new_file = compute_splice(start, end, file)
-            # print("File:", new_file)
             filelist.append(new_file)
         elif(floor < time_end and time_end <= ceiling):
             new_file = compute_splice(start, end, file)
-            # print("File:", new_file)
             filelist.append(new_file)
         elif(floor > time_start and ceiling < time_end):
-            # print("File:", file)
             filelist.append(file)
         elif(floor > time_end):
             break
@@ -153,16 +150,16 @@ def merge(filelist, trafficID):
     command = 'ffmpeg -hide_banner -loglevel error -f concat -safe 0 -i files/list-'+thread+'.txt -c copy ' + trafficID + '.mp4 -y'
     subprocess.call(command,shell=True)
 
-def splice(start, duration, filename):
+def splice(start, end, filename):
     name = os.path.splitext(filename)[0]
     thread = threading.current_thread().name
     newname =  "spliced/" + thread + "/" + name + os.path.splitext(filename)[1]
     if not os.path.exists('files/videos/spliced/'+thread):
         os.makedirs('files/videos/spliced/'+thread)
     if os.name == "nt":
-        command =  "ffmpeg -hide_banner -loglevel error -ss " + str(start) + " -i files/videos/" + filename + " -c copy -t " + str(duration) +" files/videos/" + newname + " -y"
+        command =  "ffmpeg -hide_banner -loglevel error -ss " + str(start) + " -to " + str(end) +" -i files/videos/" + filename + " -c copy files/videos/" + newname + " -y"
     elif os.name == "posix":
-        command =  "ffmpeg -hide_banner -loglevel error -ss " + str(start) + " -i 'files/videos/" + filename + "' -c copy -t " + str(duration) +" 'files/videos/" + newname + "' -y"
+        command =  "ffmpeg -hide_banner -loglevel error -ss " + str(start) + " -to " + str(end) +" -i 'files/videos/" + filename + "' -c copy 'files/videos/" + newname + "' -y"
     # print(command)
     subprocess.call(command,shell=True)
     return (newname)
@@ -172,15 +169,20 @@ def compute_splice(start, end, filename):
     file = name.replace(";", ":").split("-")
     time_start = start.strftime("%H:%M:%S")
     time_end = end.strftime("%H:%M:%S")
+    timestamp_start = 0
+    result = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "default=noprint_wrappers=1:nokey=1", 
+        "files/videos/"+filename], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    duration = float(result.stdout)
+    delta = datetime.timedelta(seconds=duration)
+    timestamp_end = duration
+    
     FMT = '%H:%M:%S'
     if (file[0] < time_start and time_start < file[1]):
-        tdelta = datetime.datetime.strptime(file[1], FMT) - datetime.datetime.strptime(time_start, FMT)
-        tstart = datetime.datetime.strptime(time_start, FMT) - datetime.datetime.strptime(file[0], FMT)
-        return (splice(tstart, tdelta, filename))
+        timestamp_start = datetime.datetime.strptime(time_start, FMT) - datetime.datetime.strptime(file[0], FMT)
+        return (splice(timestamp_start, timestamp_end, filename))
     if (file[0] < time_end and time_end < file[1]):
-        tdelta = datetime.datetime.strptime(time_end, FMT) - datetime.datetime.strptime(file[0], FMT)
-        tstart = datetime.datetime.strptime(file[1], FMT) - datetime.datetime.strptime(time_end, FMT)
-        return (splice(tstart, tdelta, filename))
+        timestamp_end = datetime.datetime.strptime(time_end, FMT) - datetime.datetime.strptime(file[1], FMT) + delta
+        return (splice(timestamp_start, timestamp_end, filename))
 
 def collect_video(gpx, start, end, lat1, lon1, lat2, lon2, trafficID):
     gps_time = check_gps_time(gpx, start, end, lat1, lon1, lat2, lon2)
