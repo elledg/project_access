@@ -170,22 +170,27 @@ def retrieve(start, end):
     return filelist
 
 def merge(filelist, trafficID):
-    list = open('list.txt', "w+")
+    # print("Current:", threading.current_thread().ident)
+    # print("Get:", threading.get_ident())
+    # print("Name:", threading.current_thread().name)
+    thread = threading.current_thread().name
+    list = open('files/list-'+thread+'.txt', "w+")
     for file in filelist:
-        list.write("file 'videos/" + file + "'\n")
+        list.write("file 'files/videos/" + file + "'\n")
     list.close()
-    command = 'ffmpeg -hide_banner -loglevel error -f concat -safe 0 -i list.txt -c copy ' + trafficID + '.mp4 -y'
+    command = 'ffmpeg -hide_banner -loglevel error -f concat -safe 0 -i list-'+thread+'.txt -c copy ' + trafficID + '.mp4 -y'
     subprocess.call(command,shell=True)
 
 def splice(start, duration, filename):
     name = os.path.splitext(filename)[0]
-    newname =  "spliced/" + name + os.path.splitext(filename)[1]
-    if not os.path.exists('videos/spliced'):
-        os.makedirs('videos/spliced')
+    thread = threading.current_thread().name
+    newname =  "spliced/" + thread + "/" + name + os.path.splitext(filename)[1]
+    if not os.path.exists('files/videos/spliced/'+thread):
+        os.makedirs('files/videos/spliced/'+thread)
     if os.name == "nt":
-        command =  "ffmpeg -hide_banner -loglevel error -ss " + str(start) + " -i videos/" + filename + " -c copy -t " + str(duration) +" videos/" + newname + " -y"
+        command =  "ffmpeg -hide_banner -loglevel error -ss " + str(start) + " -i files/videos/" + filename + " -c copy -t " + str(duration) +" files/videos/" + newname + " -y"
     elif os.name == "posix":
-        command =  "ffmpeg -hide_banner -loglevel error -ss " + str(start) + " -i 'videos/" + filename + "' -c copy -t " + str(duration) +" 'videos/" + newname + "' -y"
+        command =  "ffmpeg -hide_banner -loglevel error -ss " + str(start) + " -i 'files/videos/" + filename + "' -c copy -t " + str(duration) +" 'files/videos/" + newname + "' -y"
     # print(command)
     subprocess.call(command,shell=True)
     return (newname)
