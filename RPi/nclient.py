@@ -40,7 +40,7 @@ def display(msg):
     processname = multiprocessing.current_process().name
     logging.info(f'{processname}\{threadname}: {msg}')
 
-def clean():
+def flush():
     for thread in threads:
         if os.path.exists('files/list-' + thread + '.txt'):
             os.remove('files/list-' + thread + '.txt')
@@ -291,7 +291,7 @@ if __name__ == "__main__":
             consumer.join()
             display('Consumer has finished')
 
-            clean()
+            flush()
 
             display("Finished")
 
