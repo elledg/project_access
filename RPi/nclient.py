@@ -4,6 +4,7 @@ import datetime
 
 import io
 import os
+import shutil
 import subprocess
 import math
 import time
@@ -32,10 +33,19 @@ cnopts.hostkeys = None
 
 test = True
 
+threads = set()
+
 def display(msg):
     threadname = threading.current_thread().name
     processname = multiprocessing.current_process().name
     logging.info(f'{processname}\{threadname}: {msg}')
+
+def clean():
+    for thread in threads:
+        if os.path.exists('files/list-' + thread + '.txt'):
+            os.remove('files/list-' + thread + '.txt')
+        if os.path.exists('files/videos/spliced/' + thread):
+            shutil.rmtree('files/videos/spliced/' + thread)
 
 async def send_notification(trafficID):
     msg = {"trafficID" : trafficID,
@@ -212,6 +222,8 @@ def processor(target):
 
     log.write("Collecting video - " + str(datetime.datetime.now()) +"'\n")
     collect_video('test.gpx', start, stop, float(gps[0]), float(gps[1]), float(gps[2]), float(gps[3]), trafficID)
+    global threads
+    threads.add(threading.current_thread().name)
 
 # Producer
 def create_work(work, ready, finished):
@@ -278,6 +290,8 @@ if __name__ == "__main__":
             # Wait for consumer to finish
             consumer.join()
             display('Consumer has finished')
+
+            clean()
 
             display("Finished")
 
