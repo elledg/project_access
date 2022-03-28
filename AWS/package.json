@@ -1,11 +1,12 @@
 {
-  "name": "node-ws-test",
+  "name": "ws-test",
   "version": "0.0.1",
   "repository": {
     "type": "git",
-    "url": "https://github.com/heroku-examples/node-ws-test.git"
+    "url": "git+https://github.com/heroku-examples/node-ws-test.git"
   },
   "dependencies": {
+    "ejs": "^3.1.6",
     "express": "^4.4.5",
     "mongodb": "^4.4.1",
     "ws": "0.4.x"
@@ -15,5 +16,14 @@
   },
   "scripts": {
     "start": "node index.js"
-  }
+  },
+  "bugs": {
+    "url": "https://github.com/heroku-examples/node-ws-test/issues"
+  },
+  "homepage": "https://github.com/heroku-examples/node-ws-test#readme",
+  "main": "server_http.js",
+  "devDependencies": {},
+  "author": "",
+  "license": "ISC",
+  "description": ""
 }

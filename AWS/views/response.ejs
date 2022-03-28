@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>View Incident Responses</title>
+</head>
+<body>
+    <%- include('nav', {active: "Responses"}); %>
+
+    <h2>View Incident Responses</h2>
+    <table id="req" class="table">
+        <thead>
+        <tr> 
+            <th>TrafficID</th>
+            <th>Video File</th>
+        </tr>
+        </thead>
+        <tbody>
+        <% data.forEach(function(entry) { %>
+            <% file = entry.split(".") %> 
+            <% if(file[1] == "mp4") { %> 
+            <tr>
+                <td>
+                    <%= entry.trafficID %>
+                </td>
+                <td>
+                    <a href="/videos/<%- file[0] %> "><%= entry %></a>
+                </td>
+            </tr>
+            <% } %> 
+        <% }); %>
+        </tbody>
+    </table>
+    <script>
+        
+    </script>
+</body>
+</html>

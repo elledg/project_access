@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>View Logs</title>
+</head>
+<body>
+    <% if(page == "Response"){ %>
+        <%- include('nav', {active: "LogsRes"}); %>
+    <% } if(page == "Request"){ %>
+        <%- include('nav', {active: "LogsReq"}); %>
+    <% } %>
+
+    <h2>View <%- page %>  Logs</h2>
+    <table id="req" class="table">
+        <thead>
+        <tr> 
+            <th scope="col">TrafficID</th>
+            <th scope="col">DateTime</th>
+            <th scope="col">Client</th>
+            <th scope="col">Info</th>
+        </tr>
+        </thead>
+        <tbody>
+        <% data.forEach(function(entry) { %>
+        <tr>
+            <td scope="row"><%= entry.trafficID %></td>
+            <td><%= entry.datetime %></td>
+            <td><%= entry.client %></td>
+            <td><%-  JSON.stringify(entry.info) %></td>
+        </tr>
+        <% }); %>
+        </tbody>
+    </table>
+    <script>
+        
+    </script>
+</body>
+</html>
