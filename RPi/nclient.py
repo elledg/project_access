@@ -58,6 +58,8 @@ async def send_notification(trafficID):
         # print("SFTP Notification sent")
 
 def send_to_sftp(filename, ext=False):
+    now = datetime.datetime.now()
+    log.write(str(now.date()) +","+ str(now.time()) +","+ filename +",Sending video,"+ threading.current_thread().name +"\n")
     try: 
         with pysftp.Connection(host=env.IP, username=env.USER, password=env.PASS, cnopts=cnopts) as sftp:
             try:
@@ -67,11 +69,15 @@ def send_to_sftp(filename, ext=False):
                 else:
                     sftp.put(env.LOCAL + "files/output/" +  filename, env.REMOTE + filename)
                 print("File sent to SFTP server")
+                now = datetime.datetime.now()
+                log.write(str(now.date()) +","+ str(now.time()) +","+ filename +",Sent video,"+ threading.current_thread().name +"\n")
                 asyncio.run(send_notification(filename))
             except Exception as e:
+                log.write(",,"+ filename +",Error uploading,"+ threading.current_thread().name +"\n")
                 print("Error encountered while uploading to SFTP server")
                 print(e)
     except Exception as e:
+        log.write(",,"+ filename +",Error SFTP,"+ threading.current_thread().name +"\n")
         print("Cannot connect to SFTP server")
         print(e)
 
@@ -214,14 +220,16 @@ def collect_video(gpx, start, end, lat1, lon1, lat2, lon2, trafficID):
         merge(filelist, trafficID)
 
 def processor(target):
-    log.write(str(datetime.datetime.now()) + " - " + str(target) + "'\n")
     trafficID = target["trafficID"] 
     start = target["start"]
     stop = target["stop"]
     gps = target["gps"].split(",")
 
-    log.write("Collecting video - " + str(datetime.datetime.now()) +"'\n")
+    now = datetime.datetime.now()
+    log.write(str(now.date()) +","+ str(now.time()) +","+ trafficID +",Minion Recieved/Collecting Video,"+ threading.current_thread().name +"\n")
     collect_video('test.gpx', start, stop, float(gps[0]), float(gps[1]), float(gps[2]), float(gps[3]), trafficID)
+    now = datetime.datetime.now()
+    log.write(str(now.date()) +","+ str(now.time()) +","+ trafficID +",Collected Video,"+ threading.current_thread().name +"\n")
     global threads
     threads.add(threading.current_thread().name)
 
@@ -266,7 +274,10 @@ if __name__ == "__main__":
             data = json.loads(data_json)
             incidents = data["data"] 
 
-            log = open('files/log.txt', "a")
+            log = open('files/log.csv', "a")
+            log.write("Date, Time, TrafficID, Event, Thread\n")
+            now = datetime.datetime.now()
+            log.write(str(now.date()) +","+ str(now.time()) +",Multiple,Recieved JSON,Main\n")
 
             work = Queue()
             [work.put(i) for i in incidents]  
