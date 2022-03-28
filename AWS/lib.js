@@ -1,8 +1,4 @@
-const fs = require('fs');
-// const dir = '/var/sftp/myfolder/data/';
-const dir = "/home/arae/Desktop/Thesis/project_access/RPi/files/output/";
-const path = require('path');
-
+const dir = '/var/sftp/myfolder/data/';
 const MongoClient = require('mongodb').MongoClient;
 const MongoURL = 'mongodb://127.0.0.1:27017';
 const database = 'incidentdb'
@@ -56,4 +52,4 @@ function fileExists(trafficID){
         console.log(err);
     }
 }
-module.exports = { addToDatabase, addToLog, fileExists };
+module.exports = { dir, MongoURL, database, addToDatabase, addToLog, fileExists };

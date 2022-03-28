@@ -4,10 +4,8 @@ const WebSocket = require('ws');
 const wss_web = new WebSocket.Server({ port: ws_port });
 
 const MongoClient = require('mongodb').MongoClient;
-const MongoURL = 'mongodb://127.0.0.1:27017';
-const database = 'incidentdb'
 
-const { addToDatabase, addToLog, fileExists } = require("./lib");
+const { dir, MongoURL, database, addToDatabase, addToLog, fileExists } = require("./lib");
 
 console.log("WebSocket Server Listening on %d", ws_port)
 start_ws()

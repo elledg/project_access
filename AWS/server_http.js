@@ -9,10 +9,8 @@ app.use(express.urlencoded({ extended: true }));
 app.set('view engine', 'ejs');
 
 const MongoClient = require('mongodb').MongoClient;
-const MongoURL = 'mongodb://127.0.0.1:27017';
-const database = 'incidentdb'
 
-const { addToDatabase, addToLog, fileExists } = require("./lib");
+const { dir, MongoURL, database, addToDatabase, addToLog, fileExists } = require("./lib");
 
 app.listen(http_port, () => console.log('HTTP Server Listening on %d', http_port))
 app.get('/', (req, res) => {
