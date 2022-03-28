@@ -191,7 +191,7 @@ def merge(filelist, trafficID):
 
 def collect_video(gpx, start, end, lat1, lon1, lat2, lon2, trafficID):
     gps_time = check_gps_time(gpx, start, end, lat1, lon1, lat2, lon2)
-    if not test: input()
+    # if not test: input()
     if (gps_time == 0):
         print("No video found")
         return 0
