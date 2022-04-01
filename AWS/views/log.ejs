@@ -7,8 +7,10 @@
 <body>
     <% if(page == "Response"){ %>
         <%- include('nav', {active: "LogsRes"}); %>
+        <% var col = "logs_sftp"  %> 
     <% } if(page == "Request"){ %>
         <%- include('nav', {active: "LogsReq"}); %>
+        <% var col = "logs_ws"  %> 
     <% } %>
 
     <h2>View <%- page %>  Logs</h2>
@@ -19,21 +21,47 @@
             <th scope="col">DateTime</th>
             <th scope="col">Client</th>
             <th scope="col">Info</th>
+            <th></th>
         </tr>
         </thead>
         <tbody>
         <% data.forEach(function(entry) { %>
-        <tr>
+        <tr id="<%- entry._id %>">
             <td scope="row"><%= entry.trafficID %></td>
             <td><%= entry.datetime %></td>
             <td><%= entry.client %></td>
             <td><%-  JSON.stringify(entry.info) %></td>
+            <td><button type="button" class="btn btn-danger" id="del_<%- entry._id %>" value=<%- entry._id %>>Delete</button></td>
         </tr>
         <% }); %>
         </tbody>
     </table>
     <script>
-        
+    $("button").click(function() {
+        console.log("delete") 
+        console.log(this)
+        var id = this.value
+        var col = "<%= col %>"
+        console.log("Collection",col)
+        $.ajax({  
+            url:'/remove/'+col,  
+            method:'delete',  
+            dataType:'json',  
+            data:{'id':id},  
+            success:function(response){  
+                console.log(response)
+                if(response.msg=='success'){  
+                    console.log("deleted")
+                    $("#" + id).remove();  
+                }else{  
+                    alert('Data not deleted');  
+                }  
+            },  
+            error:function(response){  
+                alert('Server Error')     
+            }  
+        });  
+    });
     </script>
 </body>
 </html>

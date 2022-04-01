@@ -4,7 +4,7 @@ const WebSocket = require('ws');
 const wss_sftp = new WebSocket.Server({ port: sftp_port });
 const clients = new Map();
 
-const { dir, MongoURL, database, addToDatabase, addToLog, fileExists } = require("./lib");
+const { dir, MongoURL, database, addToDatabase, removeFromDatabase, addToLog, fileExists } = require("./lib");
 
 
 console.log("SFTP Server Listening on %d", sftp_port)

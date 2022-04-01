@@ -1,5 +1,6 @@
 const http_port = 8080
 
+const fs = require('fs'); 
 var express = require("express")
 var app = express()
 // Static Files are in current directory
@@ -10,7 +11,7 @@ app.set('view engine', 'ejs');
 
 const MongoClient = require('mongodb').MongoClient;
 
-const { dir, MongoURL, database, addToDatabase, addToLog, fileExists } = require("./lib");
+const { dir, MongoURL, database, addToDatabase, removeFromDatabase, addToLog, fileExists } = require("./lib");
 
 app.listen(http_port, () => console.log('HTTP Server Listening on %d', http_port))
 app.get('/', (req, res) => {
@@ -80,7 +81,6 @@ app.get('/logs/request', (req, res) => {
 	});                    
 });
 
-
 app.get('/logs/response', (req, res) => {
 	MongoClient.connect(MongoURL, (err, client) => {
 		if (err) return console.log(err);
@@ -131,5 +131,31 @@ app.get('/videos/:id', function(req, res) {
 	// Stream the video chunk to the client
 	videoStream.pipe(res);
 });
+
+app.delete('/remove/:id',(req,res)=>{
+	const collection =req.params.id;
+	const id = req.body.id;
+	console.log("From", collection)
+	if (collection == 'responses'){
+		console.log("Deleting video", id);
+		fs.unlink(dir+id, function (err) {
+			if (err) res.json({msg:'error'});
+			// if no error, file has been deleted successfully
+			res.json({msg:'success'})
+		});
+	}
+	else{
+		console.log("Deleting ", id)
+		removeFromDatabase(collection, id)
+			.then((result) => {
+				if (result.deletedCount == 1) return res.json({msg:'success'})
+				else res.json({msg:'error'})
+			})
+			.catch((result) => {
+				res.json({msg:'error'})
+			  }
+			)
+	}
+});  
 
 module.exports = app

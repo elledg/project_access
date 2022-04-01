@@ -16,23 +16,53 @@
         </tr>
         </thead>
         <tbody>
-        <% data.forEach(function(entry) { %>
+        <% data.forEach(function(entry, index) { %>
             <% file = entry.split(".") %> 
             <% if(file[1] == "mp4") { %> 
-            <tr>
+            <tr id="<%- index %>">
                 <td>
                     <%= entry.trafficID %>
                 </td>
                 <td>
                     <a href="/videos/<%- file[0] %> "><%= entry %></a>
                 </td>
-            </tr>
+                <td>
+                    <button type="button" class="btn btn-danger" id="del_<%- index %>" value=<%- index %>>
+                        Delete
+                    </button>
+                    <input id="id_<%- index %>" value="<%- entry %>" type="hidden">
+                </td>
+        </tr>
             <% } %> 
         <% }); %>
         </tbody>
     </table>
     <script>
-        
+    $("button").click(function() {
+        console.log("delete") 
+        console.log(this)
+        var id = this.value
+        var trafficID = $( "#id_"+id ).val();
+        console.log("trafficID",trafficID)
+        $.ajax({  
+            url:'/remove/responses',  
+            method:'delete',  
+            dataType:'json',  
+            data:{'id':trafficID},  
+            success:function(response){  
+                console.log(response)
+                if(response.msg=='success'){  
+                    console.log("deleted")
+                    $("#" + id).remove();  
+                }else{  
+                    alert('Data not deleted');  
+                }  
+            },  
+            error:function(response){  
+                alert('Server Error')     
+            }  
+        });  
+    });
     </script>
 </body>
 </html>

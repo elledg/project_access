@@ -15,21 +15,45 @@
             <th scope="col">Start Date</th>
             <th scope="col">End Date</th>
             <th scope="col">GPS Coordinates</th>
+            <th></th>
         </tr>
         </thead>
         <tbody>
         <% data.forEach(function(entry) { %>
-        <tr>
+        <tr id="<%- entry._id %>">
             <td scope="row"><%= entry.trafficID %></td>
             <td><%= entry.start %></td>
             <td><%= entry.stop %></td>
             <td><%= entry.gps %></td>
+            <td><button type="button" class="btn btn-danger" id="del_<%- entry._id %>" value=<%- entry._id %>>Delete</button></td>
         </tr>
         <% }); %>
         </tbody>
     </table>
     <script>
-        
+    $("button").click(function() {
+        console.log("delete") 
+        console.log(this)
+        var id = this.value
+        $.ajax({  
+            url:'/remove/requests',  
+            method:'delete',  
+            dataType:'json',  
+            data:{'id':id},  
+            success:function(response){  
+                console.log(response)
+                if(response.msg=='success'){  
+                    console.log("deleted")
+                    $("#" + id).remove();  
+                }else{  
+                    alert('Data not deleted');  
+                }  
+            },  
+            error:function(response){  
+                alert('Server Error')     
+            }  
+        });  
+    });
     </script>
 </body>
 </html>
