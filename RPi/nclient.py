@@ -254,7 +254,6 @@ def compute_splice(start, end, filename):
 
 def collect_video(gpx, start, end, lat1, lon1, lat2, lon2, trafficID):
     gps_time = check_gps_time(gpx, start, end, lat1, lon1, lat2, lon2)
-    if not test: input()
     if (gps_time == 0):
         print("No video found")
         return 0
@@ -334,73 +333,76 @@ def perform_work(work, unprocessed):
 if __name__ == "__main__":
     while True:
         print("Project Access")
+        runs = int(input("Input number of runs to execute:")) if test else 1
         p_thread = int(input("Input maximum amount of producer threads: "))
         c_thread = int(input("Input maximum amount of consumer threads: "))
         mode = int(input("Choose mode: Original [0] or Revamped [1]:"))
 
         try:
-            data_json = asyncio.run(server_request())
-            data = json.loads(data_json)
-            incidents = data["data"] 
+            for r in range(runs):    
+                data_json = asyncio.run(server_request())
+                data = json.loads(data_json)
+                incidents = data["data"] 
 
-            log = open('files/log.csv', "a")
-            log.write("Date, Time, TrafficID, Event, Thread\n")
-            now = datetime.datetime.now()
-            log.write(str(now.date()) +","+ str(now.time()) +",Multiple,Recieved JSON,Main\n")
+                log = open('files/log.csv', "a")
+                log.write("Date, Time, TrafficID, Event, Thread\n")
+                now = datetime.datetime.now()
+                log.write(str(now.date()) +","+ str(now.time()) +",Multiple,Recieved JSON,Main\n")
 
-            log_data = dict()
-            log_data["Main"] = [now]
-            for i in incidents: log_data[i["trafficID"]] = []
+                log_data = dict()
+                log_data["Main"] = [now]
+                for i in incidents: log_data[i["trafficID"]] = []
 
-            work = Queue()
-            [work.put(i) for i in incidents] 
-            number_of_requests = len(incidents)
+                work = Queue()
+                [work.put(i) for i in incidents] 
+                number_of_requests = len(incidents)
 
-            # Original mode
-            if(mode == 0):
-                ready = Queue()
+                # Original mode
+                if(mode == 0):
+                    ready = Queue()
 
-                # Set up and start producer processes
-                producers = [Thread(target=create_work, args=[work,ready], daemon=True) for _ in range(p_thread)]
-                for p in producers:
-                    p.start()
-                
-                # Set up and start consumer process
-                consumers = [Thread(target=perform_work, args=[ready, work], daemon=True) for _ in range(c_thread)]
-                for c in consumers:
-                    c.start()
+                    # Set up and start producer processes
+                    producers = [Thread(target=create_work, args=[work,ready], daemon=True) for _ in range(p_thread)]
+                    for p in producers:
+                        p.start()
+                    
+                    # Set up and start consumer process
+                    consumers = [Thread(target=perform_work, args=[ready, work], daemon=True) for _ in range(c_thread)]
+                    for c in consumers:
+                        c.start()
 
-                # Wait for producers to finish
-                for p in producers:
-                    p.join()
-                    display('Producer has finished')
+                    # Wait for producers to finish
+                    for p in producers:
+                        p.join()
+                        display('Producer has finished')
 
-                # Wait for consumer to finish
-                for c in consumers:
-                    c.join()
-                    display('Consumer has finished')
-                
-                log_data["Main"].append(datetime.datetime.now())
-                compute_log()
+                    # Wait for consumer to finish
+                    for c in consumers:
+                        c.join()
+                        display('Consumer has finished')
+                    
+                    log_data["Main"].append(datetime.datetime.now())
+                    compute_log()
 
-            # Revamped mode
-            elif(mode == 1):
-                producers = [Thread(target=create_work_with_vp, args=[work], daemon=True) for _ in range(p_thread)]
-                for p in producers:
-                    p.start()
+                # Revamped mode
+                elif(mode == 1):
+                    producers = [Thread(target=create_work_with_vp, args=[work], daemon=True) for _ in range(p_thread)]
+                    for p in producers:
+                        p.start()
 
-                for p in producers:
-                    p.join()
-                display('All processes have finished')
+                    for p in producers:
+                        p.join()
+                    display('All processes have finished')
 
-            else:
-                print("Invalid mode")
+                else:
+                    print("Invalid mode")
 
-            flush()
+                flush()
 
-            display("Finished")
+                display("Finished")
+                if test: display("Done "+str(r+1)+" run/s")
 
-            log.close()
+                log.close()
             
             if test: exit()
 
