@@ -294,18 +294,20 @@ def create_work_with_vp(work):
         c.join()
 
 # Consumer
-def perform_work(work, remaining_requests):
-    while remaining_requests:
+def perform_work(work, unprocessed):
+    while True:
+        if work.empty() and unprocessed.empty():
+            break
         v = work.get()
         display(f'Consuming: {v}')
         send_to_sftp(v)
         display(f'Consumed: {v}')
-        remaining_requests -= 1
 
 if __name__ == "__main__":
     while True:
         print("Project Access")
-        n_thread = int(input("Input maximum amount of producer threads: "))
+        p_thread = int(input("Input maximum amount of producer threads: "))
+        c_thread = int(input("Input maximum amount of consumer threads: "))
         mode = int(input("Choose mode: Original [0] or Revamped [1]:"))
 
         try:
@@ -327,13 +329,14 @@ if __name__ == "__main__":
                 ready = Queue()
 
                 # Set up and start producer processes
-                producers = [Thread(target=create_work, args=[work,ready], daemon=True) for _ in range(n_thread)]
+                producers = [Thread(target=create_work, args=[work,ready], daemon=True) for _ in range(p_thread)]
                 for p in producers:
                     p.start()
                 
                 # Set up and start consumer process
-                consumer = Thread(target=perform_work, args=[ready,number_of_requests], daemon=True)
-                consumer.start()
+                consumers = [Thread(target=perform_work, args=[ready, work], daemon=True) for _ in range(c_thread)]
+                for c in consumers:
+                    c.start()
 
                 # Wait for producers to finish
                 for p in producers:
@@ -341,12 +344,13 @@ if __name__ == "__main__":
                     display('Producer has finished')
 
                 # Wait for consumer to finish
-                consumer.join()
-                display('Consumer has finished')
+                for c in consumers:
+                    c.join()
+                    display('Consumer has finished')
 
             # Revamped mode
             elif(mode == 1):
-                producers = [Thread(target=create_work_with_vp, args=[work], daemon=True) for _ in range(n_thread)]
+                producers = [Thread(target=create_work_with_vp, args=[work], daemon=True) for _ in range(p_thread)]
                 for p in producers:
                     p.start()
 
