@@ -40,6 +40,27 @@ def display(msg):
     processname = multiprocessing.current_process().name
     logging.info(f'{processname}\{threadname}: {msg}')
 
+def compute_log():
+    data_log = open('files/log_computed.csv', "a")
+    start = log_data['Main'][0]
+    data_log.write(str(start.date()) +","+ str(start.time()) + "\n")
+    data_log.write(str(p_thread) + " Producer threads, " + str(c_thread) + " Consumer threads\n")
+    for trafficID in log_data:
+        logs = log_data[trafficID]
+        # print(trafficID, end = ": ")
+        data_log.write(trafficID)
+        for i in range(len(logs)):
+            if i == 0:
+                continue
+            delta = logs[i] - logs[i-1]
+            data_log.write(", " + str(delta))
+            # print(delta, end =", ")
+        # print()
+        data_log.write('\n')
+
+
+    data_log.close()
+
 def flush():
     for thread in threads:
         if os.path.exists('files/list-' + thread + '.txt'):
@@ -86,6 +107,8 @@ def send_videos():
 def send_to_sftp(filename, ext=False):
     now = datetime.datetime.now()
     log.write(str(now.date()) +","+ str(now.time()) +","+ filename +",Sending video,"+ threading.current_thread().name +"\n")
+    trafficID = filename.split(".")[0]
+    log_data[trafficID].append(now)
     try: 
         with pysftp.Connection(host=env.IP, username=env.USER, password=env.PASS, cnopts=cnopts) as sftp:
             try:
@@ -93,8 +116,11 @@ def send_to_sftp(filename, ext=False):
                 if ext:
                     sftp.put(env.LOCAL + "files/output/" + filename + ext, env.REMOTE + filename + ext)
                 else:
-                    sftp.put(env.LOCAL + filename, env.REMOTE + filename)
+                    sftp.put(env.LOCAL + "files/output/" + filename, env.REMOTE + filename)
                 display("File sent to SFTP server")
+                now = datetime.datetime.now()
+                log.write(str(now.date()) +","+ str(now.time()) +","+ filename +",Sent video,"+ threading.current_thread().name +"\n")
+                log_data[trafficID].append(now)
                 asyncio.run(send_notification(filename))
             except Exception as e:
                 log.write(",,"+ filename +",Error uploading,"+ threading.current_thread().name +"\n")
@@ -251,9 +277,11 @@ def processor(target):
 
     now = datetime.datetime.now()
     log.write(str(now.date()) +","+ str(now.time()) +","+ trafficID +",Minion Recieved/Collecting Video,"+ threading.current_thread().name +"\n")
+    log_data[trafficID].append(now)
     collect_video('test.gpx', start, stop, float(gps[0]), float(gps[1]), float(gps[2]), float(gps[3]), trafficID)
     now = datetime.datetime.now()
     log.write(str(now.date()) +","+ str(now.time()) +","+ trafficID +",Collected Video,"+ threading.current_thread().name +"\n")
+    log_data[trafficID].append(now)
     global threads
     threads.add(threading.current_thread().name)
 
@@ -320,6 +348,10 @@ if __name__ == "__main__":
             now = datetime.datetime.now()
             log.write(str(now.date()) +","+ str(now.time()) +",Multiple,Recieved JSON,Main\n")
 
+            log_data = dict()
+            log_data["Main"] = [now]
+            for i in incidents: log_data[i["trafficID"]] = []
+
             work = Queue()
             [work.put(i) for i in incidents] 
             number_of_requests = len(incidents)
@@ -347,6 +379,9 @@ if __name__ == "__main__":
                 for c in consumers:
                     c.join()
                     display('Consumer has finished')
+                
+                log_data["Main"].append(datetime.datetime.now())
+                compute_log()
 
             # Revamped mode
             elif(mode == 1):
