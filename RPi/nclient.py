@@ -26,7 +26,7 @@ import logging
 from threading import Thread
 from queue import Queue
 import time
-logging.basicConfig(format='%(levelname)s - %(asctime)s.%(msecs)03d: %(message)s', datefmt='%H:%M:%S', level=logging.DEBUG)
+logging.basicConfig(format='%(levelname)s - %(asctime)s.%(msecs)03d: %(message)s', datefmt='%H:%M:%S', level=logging.INFO)
 
 cnopts = pysftp.CnOpts()
 cnopts.hostkeys = None
@@ -57,6 +57,32 @@ async def send_notification(trafficID):
         print(response)
         # print("SFTP Notification sent")
 
+def send_videos():
+    try:
+        files = os.listdir()
+    except:
+        return -1
+    files.sort()
+    
+    for file in files:
+        file_split = file.split(".")
+        if (len(file_split) < 2):
+            continue
+        trafficID = file_split[0]
+        extension = file_split[1]
+        
+        if extension == "mp4":
+            with pysftp.Connection(host=env.IP, username=env.USER, password=env.PASS, cnopts=cnopts) as sftp:
+                try:
+                    print("STFP Connection successfully established ... ")
+                    print("Sending " + file + " to server")
+                    sftp.put(env.LOCAL + file, env.REMOTE + file)
+                    print("File sent to SFTP server")
+                except Exception as e:
+                    print("Error encountered while uploading to SFTP server")
+                    print(e)
+
+#try http @ELLE
 def send_to_sftp(filename, ext=False):
     now = datetime.datetime.now()
     log.write(str(now.date()) +","+ str(now.time()) +","+ filename +",Sending video,"+ threading.current_thread().name +"\n")
@@ -67,10 +93,8 @@ def send_to_sftp(filename, ext=False):
                 if ext:
                     sftp.put(env.LOCAL + "files/output/" + filename + ext, env.REMOTE + filename + ext)
                 else:
-                    sftp.put(env.LOCAL + "files/output/" +  filename, env.REMOTE + filename)
-                print("File sent to SFTP server")
-                now = datetime.datetime.now()
-                log.write(str(now.date()) +","+ str(now.time()) +","+ filename +",Sent video,"+ threading.current_thread().name +"\n")
+                    sftp.put(env.LOCAL + filename, env.REMOTE + filename)
+                display("File sent to SFTP server")
                 asyncio.run(send_notification(filename))
             except Exception as e:
                 log.write(",,"+ filename +",Error uploading,"+ threading.current_thread().name +"\n")
@@ -234,8 +258,7 @@ def processor(target):
     threads.add(threading.current_thread().name)
 
 # Producer
-def create_work(work, ready, finished):
-    finished.put(False)
+def create_work(work, ready):
     while True:
         if not work.empty():
             x = work.get()
@@ -245,29 +268,45 @@ def create_work(work, ready, finished):
             processor(x)
             ready.put(v)
             display(f'Produced: {v}')
-            
-            finished.put(True)
         else:
             break
 
-# Consumer
-def perform_work(work, finished):
-    time.sleep(1)
+# Producer v2
+def create_work_with_vp(work): 
+    children = []
     while True:
         if not work.empty():
-            v = work.get()
-            display(f'Consuming: {v}')
-            send_to_sftp(v)
-            display(f'Consumed: {v}')
+            x = work.get()
+            v = x["trafficID"]+".mp4"
+
+            display(f'Producing: {v}')
+            processor(x)
+
+            display(f'Sending: {v}')
+            sender = Thread(target=send_to_sftp, args=[v], daemon=True) 
+            sender.start()
+            children.append(sender)
+
+            display(f'Done: {v}')
         else:
-            q = finished.get()
-            if q == True:
-                break
+            break
+    for c in children:
+        c.join()
+
+# Consumer
+def perform_work(work, remaining_requests):
+    while remaining_requests:
+        v = work.get()
+        display(f'Consuming: {v}')
+        send_to_sftp(v)
+        display(f'Consumed: {v}')
+        remaining_requests -= 1
 
 if __name__ == "__main__":
     while True:
         print("Project Access")
         n_thread = int(input("Input maximum amount of producer threads: "))
+        mode = int(input("Choose mode: Original [0] or Revamped [1]:"))
 
         try:
             data_json = asyncio.run(server_request())
@@ -280,27 +319,43 @@ if __name__ == "__main__":
             log.write(str(now.date()) +","+ str(now.time()) +",Multiple,Recieved JSON,Main\n")
 
             work = Queue()
-            [work.put(i) for i in incidents]  
+            [work.put(i) for i in incidents] 
+            number_of_requests = len(incidents)
 
-            ready = Queue()
-            finished = Queue()
+            # Original mode
+            if(mode == 0):
+                ready = Queue()
 
-            # Set up and start producer processes
-            producers = [Thread(target=create_work, args=[work,ready,finished], daemon=True) for _ in range(n_thread)]
-            for p in producers:
-                p.start()
-            # Set up and start consumer process
-            consumer = Thread(target=perform_work, args=[ready,finished], daemon=True)
-            consumer.start()
+                # Set up and start producer processes
+                producers = [Thread(target=create_work, args=[work,ready], daemon=True) for _ in range(n_thread)]
+                for p in producers:
+                    p.start()
+                
+                # Set up and start consumer process
+                consumer = Thread(target=perform_work, args=[ready,number_of_requests], daemon=True)
+                consumer.start()
 
-            # Wait for producers to finish
-            for p in producers:
-                p.join()
-                display('Producer has finished')
+                # Wait for producers to finish
+                for p in producers:
+                    p.join()
+                    display('Producer has finished')
 
-            # Wait for consumer to finish
-            consumer.join()
-            display('Consumer has finished')
+                # Wait for consumer to finish
+                consumer.join()
+                display('Consumer has finished')
+
+            # Revamped mode
+            elif(mode == 1):
+                producers = [Thread(target=create_work_with_vp, args=[work], daemon=True) for _ in range(n_thread)]
+                for p in producers:
+                    p.start()
+
+                for p in producers:
+                    p.join()
+                display('All processes have finished')
+
+            else:
+                print("Invalid mode")
 
             flush()
 
