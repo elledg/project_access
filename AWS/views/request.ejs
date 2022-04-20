@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>View Incident Requests</title>
+</head>
+<body>
+    <%- include('nav', {active: "Requests"}); %>
+
+    <h2>View Incident Requests</h2>
+    <table id="req" class="table">
+        <thead>
+        <tr> 
+            <th scope="col">TrafficID</th>
+            <th scope="col">Start Date</th>
+            <th scope="col">End Date</th>
+            <th scope="col">GPS Coordinates</th>
+        </tr>
+        </thead>
+        <tbody>
+        <% data.forEach(function(entry) { %>
+        <tr>
+            <td scope="row"><%= entry.trafficID %></td>
+            <td><%= entry.start %></td>
+            <td><%= entry.stop %></td>
+            <td><%= entry.gps %></td>
+        </tr>
+        <% }); %>
+        </tbody>
+    </table>
+    <script>
+        
+    </script>
+</body>
+</html>

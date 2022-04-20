@@ -4,6 +4,7 @@ import datetime
 
 import io
 import os
+import shutil
 import subprocess
 import math
 import time
@@ -32,10 +33,19 @@ cnopts.hostkeys = None
 
 test = True
 
+threads = set()
+
 def display(msg):
     threadname = threading.current_thread().name
     processname = multiprocessing.current_process().name
     logging.info(f'{processname}\{threadname}: {msg}')
+
+def flush():
+    for thread in threads:
+        if os.path.exists('files/list-' + thread + '.txt'):
+            os.remove('files/list-' + thread + '.txt')
+        if os.path.exists('files/videos/spliced/' + thread):
+            shutil.rmtree('files/videos/spliced/' + thread)
 
 async def send_notification(trafficID):
     msg = {"trafficID" : trafficID,
@@ -74,20 +84,24 @@ def send_videos():
 
 #try http @ELLE
 def send_to_sftp(filename, ext=False):
+    now = datetime.datetime.now()
+    log.write(str(now.date()) +","+ str(now.time()) +","+ filename +",Sending video,"+ threading.current_thread().name +"\n")
     try: 
         with pysftp.Connection(host=env.IP, username=env.USER, password=env.PASS, cnopts=cnopts) as sftp:
             try:
                 print("STFP Connection successfully established ... ")
                 if ext:
-                    sftp.put(env.LOCAL + filename + ext, env.REMOTE + filename + ext)
+                    sftp.put(env.LOCAL + "files/output/" + filename + ext, env.REMOTE + filename + ext)
                 else:
                     sftp.put(env.LOCAL + filename, env.REMOTE + filename)
                 display("File sent to SFTP server")
                 asyncio.run(send_notification(filename))
             except Exception as e:
+                log.write(",,"+ filename +",Error uploading,"+ threading.current_thread().name +"\n")
                 print("Error encountered while uploading to SFTP server")
                 print(e)
     except Exception as e:
+        log.write(",,"+ filename +",Error SFTP,"+ threading.current_thread().name +"\n")
         print("Cannot connect to SFTP server")
         print(e)
 
@@ -109,7 +123,7 @@ def is_within_geofence(lat, lon, lat1, lon1, lat2, lon2):
 
 def check_gps_time(file_name, start, end, lat1, lon1, lat2, lon2):
     try:
-        gpx_file = open(file_name, 'r')
+        gpx_file = open('files/'+file_name, 'r')
     except:
         return -1
 
@@ -124,8 +138,8 @@ def check_gps_time(file_name, start, end, lat1, lon1, lat2, lon2):
                 current_time = point.time.replace(tzinfo=None)
                 if start_time <= current_time and end_time >= current_time:
                     gps_found = is_within_geofence(point.latitude, point.longitude, lat1, lon1, lat2, lon2)
-                    print("Timestamp:", current_time)
-                    print("Enclosed:", gps_found)
+                    # print("Timestamp:", current_time)
+                    # print("Enclosed:", gps_found)
                     if gps_found:
                         return current_time
     return 0
@@ -136,7 +150,7 @@ def retrieve(start, end):
     time_end = end.time()
 
     try:
-        files = os.listdir("videos")
+        files = os.listdir("files/videos")
     except:
         return -1
     files.sort()
@@ -157,36 +171,37 @@ def retrieve(start, end):
         
         if(floor <= time_start and time_start < ceiling):
             new_file = compute_splice(start, end, file)
-            # print("File:", new_file)
             filelist.append(new_file)
         elif(floor < time_end and time_end <= ceiling):
             new_file = compute_splice(start, end, file)
-            # print("File:", new_file)
             filelist.append(new_file)
         elif(floor > time_start and ceiling < time_end):
-            # print("File:", file)
             filelist.append(file)
         elif(floor > time_end):
             break
     return filelist
 
 def merge(filelist, trafficID):
-    list = open('list.txt', "w+")
+    if not os.path.exists('files/output'):
+        os.makedirs('files/output')
+    thread = threading.current_thread().name
+    list = open('files/list-'+thread+'.txt', "w+")
     for file in filelist:
         list.write("file 'videos/" + file + "'\n")
     list.close()
-    command = 'ffmpeg -hide_banner -loglevel error -f concat -safe 0 -i list.txt -c copy ' + trafficID + '.mp4 -y'
+    command = 'ffmpeg -hide_banner -loglevel error -f concat -safe 0 -i files/list-'+thread+'.txt -c copy files/output/' + trafficID + '.mp4 -y'
     subprocess.call(command,shell=True)
 
-def splice(start, duration, filename):
+def splice(start, end, filename):
     name = os.path.splitext(filename)[0]
-    newname =  "spliced/" + name + os.path.splitext(filename)[1]
-    if not os.path.exists('videos/spliced'):
-        os.makedirs('videos/spliced')
+    thread = threading.current_thread().name
+    newname =  "spliced/" + thread + "/" + name + os.path.splitext(filename)[1]
+    if not os.path.exists('files/videos/spliced/'+thread):
+        os.makedirs('files/videos/spliced/'+thread)
     if os.name == "nt":
-        command =  "ffmpeg -hide_banner -loglevel error -ss " + str(start) + " -i videos/" + filename + " -c copy -t " + str(duration) +" videos/" + newname + " -y"
+        command =  "ffmpeg -hide_banner -loglevel error -ss " + str(start) + " -to " + str(end) +" -i files/videos/" + filename + " -c copy files/videos/" + newname + " -y"
     elif os.name == "posix":
-        command =  "ffmpeg -hide_banner -loglevel error -ss " + str(start) + " -i 'videos/" + filename + "' -c copy -t " + str(duration) +" 'videos/" + newname + "' -y"
+        command =  "ffmpeg -hide_banner -loglevel error -ss " + str(start) + " -to " + str(end) +" -i 'files/videos/" + filename + "' -c copy 'files/videos/" + newname + "' -y"
     # print(command)
     subprocess.call(command,shell=True)
     return (newname)
@@ -196,15 +211,20 @@ def compute_splice(start, end, filename):
     file = name.replace(";", ":").split("-")
     time_start = start.strftime("%H:%M:%S")
     time_end = end.strftime("%H:%M:%S")
+    timestamp_start = 0
+    result = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "default=noprint_wrappers=1:nokey=1", 
+        "files/videos/"+filename], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    duration = float(result.stdout)
+    delta = datetime.timedelta(seconds=duration)
+    timestamp_end = duration
+    
     FMT = '%H:%M:%S'
     if (file[0] < time_start and time_start < file[1]):
-        tdelta = datetime.datetime.strptime(file[1], FMT) - datetime.datetime.strptime(time_start, FMT)
-        tstart = datetime.datetime.strptime(time_start, FMT) - datetime.datetime.strptime(file[0], FMT)
-        return (splice(tstart, tdelta, filename))
+        timestamp_start = datetime.datetime.strptime(time_start, FMT) - datetime.datetime.strptime(file[0], FMT)
+        return (splice(timestamp_start, timestamp_end, filename))
     if (file[0] < time_end and time_end < file[1]):
-        tdelta = datetime.datetime.strptime(time_end, FMT) - datetime.datetime.strptime(file[0], FMT)
-        tstart = datetime.datetime.strptime(file[1], FMT) - datetime.datetime.strptime(time_end, FMT)
-        return (splice(tstart, tdelta, filename))
+        timestamp_end = datetime.datetime.strptime(time_end, FMT) - datetime.datetime.strptime(file[1], FMT) + delta
+        return (splice(timestamp_start, timestamp_end, filename))
 
 def collect_video(gpx, start, end, lat1, lon1, lat2, lon2, trafficID):
     gps_time = check_gps_time(gpx, start, end, lat1, lon1, lat2, lon2)
@@ -224,14 +244,18 @@ def collect_video(gpx, start, end, lat1, lon1, lat2, lon2, trafficID):
         merge(filelist, trafficID)
 
 def processor(target):
-    log.write(str(datetime.datetime.now()) + " - " + str(target) + "'\n")
     trafficID = target["trafficID"] 
     start = target["start"]
     stop = target["stop"]
     gps = target["gps"].split(",")
 
-    log.write("Collecting video - " + str(datetime.datetime.now()) +"'\n")
+    now = datetime.datetime.now()
+    log.write(str(now.date()) +","+ str(now.time()) +","+ trafficID +",Minion Recieved/Collecting Video,"+ threading.current_thread().name +"\n")
     collect_video('test.gpx', start, stop, float(gps[0]), float(gps[1]), float(gps[2]), float(gps[3]), trafficID)
+    now = datetime.datetime.now()
+    log.write(str(now.date()) +","+ str(now.time()) +","+ trafficID +",Collected Video,"+ threading.current_thread().name +"\n")
+    global threads
+    threads.add(threading.current_thread().name)
 
 # Producer
 def create_work(work, ready):
@@ -289,7 +313,10 @@ if __name__ == "__main__":
             data = json.loads(data_json)
             incidents = data["data"] 
 
-            log = open('log.txt', "a")
+            log = open('files/log.csv', "a")
+            log.write("Date, Time, TrafficID, Event, Thread\n")
+            now = datetime.datetime.now()
+            log.write(str(now.date()) +","+ str(now.time()) +",Multiple,Recieved JSON,Main\n")
 
             work = Queue()
             [work.put(i) for i in incidents] 
@@ -329,6 +356,8 @@ if __name__ == "__main__":
 
             else:
                 print("Invalid mode")
+
+            flush()
 
             display("Finished")
 

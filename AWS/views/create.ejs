@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Create Incident Request</title>
+    <!-- Include scripts and styles for datetimes daterangepicker -->
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/jquery/latest/jquery.min.js"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+</head>
+<body>
+    <%- include('nav', {active: "Create"}); %>
+
+    <h2>Create Incident Request</h2>
+
+    <form method="post" class="row g-3">
+      <div class="col-md-6">
+        <label class="form-label" for="date">Date</label>
+        <input class="form-control" id="date" type="text" name="datetimes" placeholder="MM/DD/YYY"/>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label" for="trafficID">TrafficID</label>
+        <input class="form-control" id="trafficID" type="text" name="trafficID" placeholder="AKB48"/>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label">GPS Coordinates 1: </label>
+      </div>
+      <div class="col-md-5">
+        <label class="form-label" for="gps">Lon</label>
+        <input class="form-control" type="number" step="any" id="gps" name="gps1x" placeholder="15">
+      </div>
+      <div class="col-md-5">
+        <label class="form-label" for="gps">Lat</label>
+        <input class="form-control" type="number" step="any" id="gps" name="gps1y" placeholder="133">
+      </div>
+
+      <div class="col-md-2">
+        <label class="form-label">GPS Coordinates 2: </label>
+      </div>
+      <div class="col-md-5">
+        <label class="form-label" for="gps">Lon</label>
+        <input class="form-control" type="number" step="any" id="gps" name="gps2x" placeholder="12">
+      </div>
+      <div class="col-md-5">
+        <label class="form-label" for="gps">Lat</label>
+        <input class="form-control" type="number" step="any" id="gps" name="gps2y" placeholder="110">
+      </div>
+
+      <div class="col-12">
+        <button type="submit" class="btn btn-primary">Submit</button>
+      </div>
+    </form>
+
+<script>
+$(function() {
+  $('input[name="datetimes"]').daterangepicker({
+    timePicker: true,
+    timePickerSeconds: true,
+    startDate: moment().startOf('hour'),
+    endDate: moment().startOf('hour').add(32, 'hour'),
+    locale: {
+      format: 'YYYY-MM-DD HH:mm:ss'
+    }
+  });
+});
+</script>
+
+</body>
+</html>
