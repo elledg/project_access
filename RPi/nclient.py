@@ -44,7 +44,7 @@ def compute_log():
     data_log = open('files/log_computed.csv', "a")
     start = log_data['Main'][0]
     data_log.write(str(start.date()) +","+ str(start.time()) + "\n")
-    data_log.write(str(p_thread) + " Producer threads, " + str(c_thread) + " Consumer threads\n")
+    data_log.write(str(p_thread) + " Producer threads, " + str(c_thread) + " Consumer threads, Mode: " + str(mode) + '\n')
     for trafficID in log_data:
         logs = log_data[trafficID]
         # print(trafficID, end = ": ")
@@ -285,7 +285,7 @@ def processor(target):
     threads.add(threading.current_thread().name)
 
 # Producer
-def create_work(work, ready):
+def create_work(work, ready, finished):
     while True:
         if not work.empty():
             x = work.get()
@@ -296,6 +296,7 @@ def create_work(work, ready):
             ready.put(v)
             display(f'Produced: {v}')
         else:
+            finished.put(True)
             break
 
 # Producer v2
@@ -321,9 +322,9 @@ def create_work_with_vp(work):
         c.join()
 
 # Consumer
-def perform_work(work, unprocessed):
+def perform_work(work, finished):
     while True:
-        if work.empty() and unprocessed.empty():
+        if work.empty() and (finished.qsize() == p_thread):
             break
         v = work.get()
         display(f'Consuming: {v}')
@@ -355,19 +356,19 @@ if __name__ == "__main__":
 
                 work = Queue()
                 [work.put(i) for i in incidents] 
-                number_of_requests = len(incidents)
+                finished = Queue()
 
                 # Original mode
                 if(mode == 0):
                     ready = Queue()
 
                     # Set up and start producer processes
-                    producers = [Thread(target=create_work, args=[work,ready], daemon=True) for _ in range(p_thread)]
+                    producers = [Thread(target=create_work, args=[work,ready,finished], daemon=True) for _ in range(p_thread)]
                     for p in producers:
                         p.start()
                     
                     # Set up and start consumer process
-                    consumers = [Thread(target=perform_work, args=[ready, work], daemon=True) for _ in range(c_thread)]
+                    consumers = [Thread(target=perform_work, args=[ready,finished], daemon=True) for _ in range(c_thread)]
                     for c in consumers:
                         c.start()
 
@@ -393,6 +394,8 @@ if __name__ == "__main__":
                     for p in producers:
                         p.join()
                     display('All processes have finished')
+                    log_data["Main"].append(datetime.datetime.now())
+                    compute_log()
 
                 else:
                     print("Invalid mode")
