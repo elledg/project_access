@@ -1,5 +1,4 @@
-// const dir = '/var/sftp/myfolder/data/';
-const dir = '/home/arae/Desktop/Thesis/project_access/RPi/files/output/'
+const dir = '/sftp/myfolder/data/';
 const MongoClient = require('mongodb').MongoClient;
 const mongodb = require('mongodb');
 const MongoURL = 'mongodb://127.0.0.1:27017';

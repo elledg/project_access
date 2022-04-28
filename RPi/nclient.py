@@ -41,21 +41,19 @@ def display(msg):
     logging.info(f'{processname}\{threadname}: {msg}')
 
 def compute_log():
-    data_log = open('files/log_computed.csv', "a")
+    data_log = open('files/log_timestamp.csv', "a")
     start = log_data['Main'][0]
     data_log.write(str(start.date()) +","+ str(start.time()) + "\n")
     data_log.write(str(p_thread) + " Producer threads, " + str(c_thread) + " Consumer threads, Mode: " + str(mode) + '\n')
+    data_log.write("Total, Time Start, Time End\n")
     for trafficID in log_data:
         logs = log_data[trafficID]
-        # print(trafficID, end = ": ")
         data_log.write(trafficID)
         for i in range(len(logs)):
-            if i == 0:
-                continue
-            delta = logs[i] - logs[i-1]
+            delta = logs[i] - start
             data_log.write(", " + str(delta))
-            # print(delta, end =", ")
-        # print()
+        if trafficID == 'Main':
+            data_log.write("\nTrafficID, Checked GPS, Recieved by Minion, Retrieved Necessary Videos, Merged Videos, Sending Video, Sent Video")
         data_log.write('\n')
 
 
@@ -254,6 +252,10 @@ def compute_splice(start, end, filename):
 
 def collect_video(gpx, start, end, lat1, lon1, lat2, lon2, trafficID):
     gps_time = check_gps_time(gpx, start, end, lat1, lon1, lat2, lon2)
+
+    now = datetime.datetime.now()
+    log_data[trafficID].append(now)
+    
     if (gps_time == 0):
         print("No video found")
         return 0
@@ -263,6 +265,10 @@ def collect_video(gpx, start, end, lat1, lon1, lat2, lon2, trafficID):
     elif (gps_time != 0):
         end = datetime.datetime.fromisoformat(end)
         filelist = retrieve(gps_time, end)
+        
+        now = datetime.datetime.now()
+        log_data[trafficID].append(now)
+        
         if (filelist == -1):
             print("Video folder not found")
             return
@@ -277,10 +283,13 @@ def processor(target):
     now = datetime.datetime.now()
     log.write(str(now.date()) +","+ str(now.time()) +","+ trafficID +",Minion Recieved/Collecting Video,"+ threading.current_thread().name +"\n")
     log_data[trafficID].append(now)
+
     collect_video('test.gpx', start, stop, float(gps[0]), float(gps[1]), float(gps[2]), float(gps[3]), trafficID)
+
     now = datetime.datetime.now()
     log.write(str(now.date()) +","+ str(now.time()) +","+ trafficID +",Collected Video,"+ threading.current_thread().name +"\n")
     log_data[trafficID].append(now)
+
     global threads
     threads.add(threading.current_thread().name)
 
@@ -345,6 +354,8 @@ if __name__ == "__main__":
                 data = json.loads(data_json)
                 incidents = data["data"] 
 
+                if not os.path.exists('files/'):
+                    os.makedirs('files/')
                 log = open('files/log.csv', "a")
                 log.write("Date, Time, TrafficID, Event, Thread\n")
                 now = datetime.datetime.now()
